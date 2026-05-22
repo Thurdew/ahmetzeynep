@@ -517,7 +517,7 @@
         if (checkAdminPassword(val)) {
             document.getElementById('admin-lock').style.display   = 'none';
             document.getElementById('admin-header').style.display = '';
-            document.getElementById('admin-panel').style.display  = '';
+            document.getElementById('admin-panel').style.display  = 'block';
             loadAll();
         } else {
             document.getElementById('pw-error').textContent = 'Şifre yanlış.';
@@ -536,6 +536,8 @@
 
     /* ── İlk yükleme ────────────────────────────────────────────── */
     async function loadAll() {
+        bindPhotoUrlPreview();
+        bindBgInputs();
         loadPhotosAdmin();
         loadQuestionsAdmin();
         loadSettingsAdmin();
@@ -551,18 +553,22 @@
         gundelik: '☀️ Gündelik Sihir'
     };
 
-    // URL önizleme
-    document.getElementById('photo-url').addEventListener('input', function() {
-        const wrap = document.getElementById('photo-preview-wrap');
-        const img  = document.getElementById('photo-preview-img');
-        if (this.value) {
-            wrap.style.display = '';
-            img.src = this.value;
-            img.onerror = () => { wrap.style.display = 'none'; };
-        } else {
-            wrap.style.display = 'none';
-        }
-    });
+    // URL önizleme — panel açıldıktan sonra bağlanır
+    function bindPhotoUrlPreview() {
+        const input = document.getElementById('photo-url');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            const wrap = document.getElementById('photo-preview-wrap');
+            const img  = document.getElementById('photo-preview-img');
+            if (this.value) {
+                wrap.style.display = '';
+                img.src = this.value;
+                img.onerror = () => { wrap.style.display = 'none'; };
+            } else {
+                wrap.style.display = 'none';
+            }
+        });
+    }
 
     async function addPhotoHandler() {
         const url     = document.getElementById('photo-url').value.trim();
@@ -837,17 +843,20 @@
         }
     }
 
-    document.getElementById('s-bg-custom').addEventListener('input', function() {
-        _bgType = 'gradient'; _bgValue = '';
-        highlightSwatch('');
-        updateBgPreview('gradient', this.value);
-    });
-
-    document.getElementById('s-bg-img').addEventListener('input', function() {
-        _bgType = 'image'; _bgValue = '';
-        highlightSwatch('');
-        updateBgPreview('image', this.value);
-    });
+    function bindBgInputs() {
+        const bgCustom = document.getElementById('s-bg-custom');
+        const bgImg    = document.getElementById('s-bg-img');
+        if (bgCustom) bgCustom.addEventListener('input', function() {
+            _bgType = 'gradient'; _bgValue = '';
+            highlightSwatch('');
+            updateBgPreview('gradient', this.value);
+        });
+        if (bgImg) bgImg.addEventListener('input', function() {
+            _bgType = 'image'; _bgValue = '';
+            highlightSwatch('');
+            updateBgPreview('image', this.value);
+        });
+    }
 
     async function saveBackground() {
         const imgUrl     = document.getElementById('s-bg-img').value.trim();
