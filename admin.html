@@ -1,934 +1,624 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Paneli 🔐</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        body { overflow-y: auto; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Paneli 🔐</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --pk:#e8879a;--pk2:#ffb6c1;
+  --li:#9b6b9b;--li2:#c8a2c8;
+  --cr:#fff5e4;--gold:#f5c842;
+  --tx:#5a3a4a;--txm:#9a7a8a;
+  --white:#ffffff;
+}
+body{font-family:'Lato',sans-serif;background:linear-gradient(135deg,#ffe4ec,#f5e6ff 50%,#fff5e4);min-height:100vh;color:var(--tx)}
 
-        /* Şifre kutusu */
-        #admin-lock {
-            position: fixed; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            padding: 20px; z-index: 900;
-        }
+/* LOCK */
+#lock{position:fixed;inset:0;z-index:900;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#ffe4ec,#f5e6ff 50%,#fff5e4)}
+.lock-card{background:#fff;border-radius:24px;padding:44px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(200,162,200,.3);display:flex;flex-direction:column;gap:16px}
+.lock-card h1{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--tx)}
+.lock-card p{font-size:.9rem;color:var(--txm)}
+#pw-err{color:#c0392b;font-size:.85rem;min-height:18px}
 
-        .lock-card {
-            background: var(--white); border-radius: var(--radius-card);
-            padding: 40px 28px; max-width: 380px; width: 100%;
-            text-align: center; box-shadow: var(--card-shadow);
-            display: flex; flex-direction: column; gap: 18px;
-        }
+/* PANEL */
+#panel{display:none;max-width:900px;margin:0 auto;padding:20px 16px 80px}
 
-        .lock-card h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.7rem; color: var(--deep);
-        }
+/* HEADER */
+.adm-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding:16px 20px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(200,162,200,.2)}
+.adm-header a{font-size:.85rem;color:var(--li);text-decoration:none;padding:8px 16px;border:2px solid var(--li2);border-radius:50px;transition:.2s}
+.adm-header a:hover{background:var(--li2);color:#fff}
+.adm-header h1{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--tx);flex:1;text-align:center}
 
-        .lock-card p { font-size: .9rem; color: var(--muted); }
+/* TABS */
+.tabs{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:10px 22px;border-radius:50px;border:2px solid #ede4f5;background:rgba(255,255,255,.8);font-family:'Playfair Display',serif;font-size:.9rem;color:var(--txm);cursor:pointer;transition:.2s}
+.tab.on{background:linear-gradient(135deg,var(--pk),var(--li));border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(232,135,154,.4)}
+.tab-panel{display:none}.tab-panel.on{display:block}
 
-        /* Admin paneli */
-        #admin-panel {
-            max-width: 900px; margin: 0 auto;
-            padding: 16px 16px 80px;
-            position: relative; z-index: 1;
-            display: none;
-        }
+/* CARD */
+.card{background:rgba(255,255,255,.92);border-radius:20px;padding:24px;margin-bottom:16px;box-shadow:0 6px 28px rgba(200,162,200,.18)}
+.card h3{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--tx);margin-bottom:16px}
 
-        /* Sekme başlığı */
-        .admin-tabs {
-            display: flex; gap: 6px; overflow-x: auto;
-            padding-bottom: 4px; margin-bottom: 20px;
-            scrollbar-width: none;
-        }
+/* FORM */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fg label{font-size:.75rem;font-weight:700;letter-spacing:1px;color:var(--txm);text-transform:uppercase}
+.fi,.fs,.ft{padding:10px 14px;border:2px solid #ede4f5;border-radius:12px;font-family:'Lato',sans-serif;font-size:.9rem;color:var(--tx);background:#faf4ff;outline:none;transition:.2s;width:100%}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--li2)}
+.ft{resize:vertical;min-height:72px}
+.frow{display:flex;gap:10px;flex-wrap:wrap}
+.frow .fg{flex:1;min-width:140px}
 
-        .admin-tabs::-webkit-scrollbar { display: none; }
+/* BUTTON */
+.btn{padding:11px 26px;border:none;border-radius:50px;font-family:'Playfair Display',serif;font-size:.95rem;cursor:pointer;transition:.2s;display:inline-block}
+.btn-p{background:linear-gradient(135deg,var(--pk),var(--li));color:#fff;box-shadow:0 4px 16px rgba(232,135,154,.4)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(232,135,154,.5)}
+.btn-s{background:#fff;color:var(--li);border:2px solid var(--li2)}
+.btn-s:hover{background:var(--li2);color:#fff}
+.btn-d{background:#fff;color:#c0392b;border:2px solid #fcc}
+.btn-d:hover{background:#fcc;color:#c0392b}
+.btn-sm{padding:7px 16px;font-size:.82rem}
+.btn-block{width:100%;text-align:center}
+.btn:disabled{opacity:.5;cursor:default;transform:none}
 
-        .tab-btn {
-            flex-shrink: 0; padding: 10px 20px;
-            border-radius: var(--radius-btn);
-            border: 2px solid #ede4f5;
-            background: rgba(255,255,255,.8);
-            font-family: 'Playfair Display', serif;
-            font-size: .88rem; color: var(--muted);
-            cursor: pointer; transition: all .2s;
-        }
+/* PHOTO GRID */
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:12px}
+.pi{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:4/3;background:#f3eaff;box-shadow:0 4px 14px rgba(200,162,200,.2)}
+.pi img{width:100%;height:100%;object-fit:cover;display:block}
+.pi .del{position:absolute;top:5px;right:5px;background:rgba(200,30,30,.85);border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.pi .del:hover{transform:scale(1.15)}
+.sec-label{font-family:'Playfair Display',serif;font-size:.82rem;color:var(--txm);font-style:italic;text-align:center;padding:6px 0;margin-top:8px}
 
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--pink), var(--lilac));
-            border-color: transparent; color: var(--white);
-            box-shadow: var(--btn-shadow);
-        }
+/* QUESTION ROW */
+.qr{padding:14px;border:2px solid #ede4f5;border-radius:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;background:#faf4ff}
+.qr-text{flex:1;font-size:.86rem;line-height:1.5}
+.qr-text strong{font-family:'Playfair Display',serif;display:block;margin-bottom:4px}
+.qr-text span{font-size:.76rem;color:var(--txm)}
+.qr-acts{display:flex;gap:6px;flex-shrink:0}
 
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
+/* PLAYER ROW */
+.pr{display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:center;margin-bottom:12px}
+.avatar{width:54px;height:54px;border-radius:50%;object-fit:cover;border:3px solid var(--pk2);background:linear-gradient(135deg,#ffb6c1,#c8a2c8);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;color:#fff;font-size:1.2rem;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 
-        /* Admin kart */
-        .admin-card {
-            background: rgba(255,255,255,.9); border-radius: var(--radius-card);
-            padding: 22px; margin-bottom: 16px;
-            box-shadow: 0 6px 28px rgba(200,162,200,.18);
-        }
+/* BG SWATCHES */
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.sw{width:46px;height:46px;border-radius:10px;cursor:pointer;border:3px solid transparent;transition:.2s;flex-shrink:0}
+.sw:hover{transform:scale(1.1)}
+.sw.on{border-color:var(--tx);box-shadow:0 0 0 2px #fff inset}
+#bg-prev{height:42px;border-radius:10px;margin-bottom:12px;display:none;border:2px solid #ede4f5}
 
-        .admin-card h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.05rem; color: var(--deep); margin-bottom: 14px;
-        }
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(90,58,74,.45);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.mbox{background:#fff;border-radius:24px;padding:32px 24px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 16px 60px rgba(200,162,200,.4)}
+.mbox h2{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--tx);margin-bottom:16px}
+.mclose{position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--txm)}
 
-        /* Form */
-        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
-        .form-row .form-group { flex: 1; min-width: 160px; }
+/* PICKER GRID */
+.picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;max-height:360px;overflow-y:auto;margin-top:12px}
+.picker-item{aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;border:3px solid transparent;transition:.2s}
+.picker-item:hover{border-color:var(--li2);transform:scale(1.05)}
+.picker-item img{width:100%;height:100%;object-fit:cover;display:block}
 
-        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
-        .form-group label { font-size: .78rem; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
-        .form-input, .form-select, .form-textarea {
-            padding: 10px 13px; border: 2px solid #ede4f5; border-radius: var(--radius-sm);
-            font-family: 'Lato', sans-serif; font-size: .9rem; color: var(--deep);
-            background: #faf4ff; outline: none; transition: border-color .2s; width: 100%;
-        }
-        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--lilac); }
-        .form-textarea { resize: vertical; min-height: 70px; }
+/* SPINNER */
+.spin{display:inline-block;width:28px;height:28px;border:3px solid #ede4f5;border-top-color:var(--li2);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:24px}
 
-        /* Fotoğraf listesi */
-        .photo-grid-admin {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 10px; margin-top: 12px;
-        }
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--tx);color:#fff;padding:12px 28px;border-radius:50px;font-size:.9rem;opacity:0;transition:.3s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-        .photo-admin-item {
-            position: relative; border-radius: 12px;
-            overflow: hidden; aspect-ratio: 4/3;
-            box-shadow: 0 4px 14px rgba(200,162,200,.2);
-            background: #f3eaff;
-        }
+/* IMG PREVIEW */
+#photo-prev-wrap{display:none;margin-bottom:10px}
+#photo-prev-wrap img{max-height:110px;border-radius:10px;object-fit:cover}
 
-        .photo-admin-item img { width:100%; height:100%; object-fit:cover; }
-
-        .photo-admin-item .del-photo-btn {
-            position: absolute; top: 5px; right: 5px;
-            background: rgba(200,30,30,.85); border: none; border-radius: 50%;
-            width: 26px; height: 26px; color: #fff; font-size: .85rem;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: transform .2s;
-        }
-
-        .photo-admin-item .del-photo-btn:hover { transform: scale(1.15); }
-
-        .photo-section-label {
-            font-family: 'Playfair Display', serif; font-size: .82rem;
-            color: var(--muted); font-style: italic; text-align:center;
-            padding: 4px 0;
-        }
-
-        /* Soru listesi */
-        .q-admin-row {
-            padding: 12px 14px; border: 2px solid #ede4f5; border-radius: var(--radius-sm);
-            margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;
-            background: #faf4ff; transition: border-color .2s;
-        }
-
-        .q-admin-row:hover { border-color: rgba(200,162,200,.4); }
-
-        .q-admin-text { flex: 1; font-size: .86rem; color: var(--deep); line-height: 1.4; }
-        .q-admin-text strong { font-family: 'Playfair Display', serif; }
-
-        .q-admin-actions { display: flex; gap: 6px; flex-shrink: 0; }
-
-        /* Ayarlar: oyuncu fotoğrafları */
-        .settings-game { margin-bottom: 20px; }
-
-        .settings-game h4 {
-            font-family: 'Playfair Display', serif; font-size: .95rem;
-            color: var(--deep); margin-bottom: 10px; padding-bottom: 6px;
-            border-bottom: 2px solid #ede4f5;
-        }
-
-        .player-setting-row {
-            display: grid; grid-template-columns: 60px 1fr; gap: 12px;
-            align-items: center; margin-bottom: 10px;
-        }
-
-        .player-preview {
-            width: 55px; height: 55px; border-radius: 50%;
-            object-fit: cover; border: 3px solid var(--pink);
-            background: linear-gradient(135deg,#ffb6c1,#c8a2c8);
-            display: flex; align-items: center; justify-content: center;
-            font-family: 'Playfair Display', serif; color: #fff; font-size: 1.2rem;
-            overflow: hidden;
-        }
-
-        .player-preview img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-
-        /* Arka fon renk swatchları */
-        .bg-presets { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-        .bg-swatch {
-            width:46px; height:46px; border-radius:10px; cursor:pointer;
-            border:3px solid transparent; transition:transform .2s, border-color .2s;
-            flex-shrink:0;
-        }
-        .bg-swatch:hover { transform:scale(1.12); }
-        .bg-swatch.selected { border-color:var(--deep); box-shadow:0 0 0 2px #fff inset; }
-
-        /* Fotoğraf seçici modal grid */
-        #photo-picker-modal .modal-box { max-width:560px; }
-        .photo-picker-grid {
-            display:grid;
-            grid-template-columns:repeat(auto-fill,minmax(88px,1fr));
-            gap:8px; max-height:360px; overflow-y:auto; margin-top:14px;
-            padding-right:4px;
-        }
-        .photo-picker-item {
-            aspect-ratio:1; border-radius:8px; overflow:hidden; cursor:pointer;
-            border:3px solid transparent; transition:border-color .2s, transform .2s;
-        }
-        .photo-picker-item:hover { border-color:var(--lilac); transform:scale(1.05); }
-        .photo-picker-item img { width:100%; height:100%; object-fit:cover; display:block; }
-
-        /* Oyuncu foto satırı — 3 sütun: önizleme | input | buton */
-        .player-setting-row {
-            display:grid; grid-template-columns:60px 1fr auto; gap:10px;
-            align-items:center; margin-bottom:10px;
-        }
-    </style>
+@media(max-width:500px){.pr{grid-template-columns:48px 1fr};.btn-sm{padding:6px 12px;font-size:.78rem}}
+</style>
 </head>
 <body>
 
-<div id="particles"></div>
-
-<!-- Şifre ekranı -->
-<div id="admin-lock">
-    <div class="lock-card">
-        <div style="font-size:3rem">🔐</div>
-        <h1>Admin Paneli</h1>
-        <p>Devam etmek için şifreyi gir</p>
-        <div class="form-group">
-            <input class="form-input" type="password" id="pw-input" placeholder="Şifre"
-                   onkeydown="if(event.key==='Enter')checkPw()">
-        </div>
-        <p style="font-size:.8rem;color:#c0392b;min-height:18px" id="pw-error"></p>
-        <button class="btn btn-primary btn-block" onclick="checkPw()">Giriş Yap →</button>
+<!-- LOCK -->
+<div id="lock">
+  <div class="lock-card">
+    <div style="font-size:3rem">🔐</div>
+    <h1>Admin Paneli</h1>
+    <p>Devam etmek için şifreyi gir</p>
+    <div class="fg">
+      <input class="fi" type="password" id="pw-in" placeholder="Şifre"
+             onkeydown="if(event.key==='Enter')checkPw()">
     </div>
+    <p id="pw-err"></p>
+    <button class="btn btn-p btn-block" onclick="checkPw()">Giriş Yap →</button>
+  </div>
 </div>
 
-<!-- Admin paneli -->
-<header class="page-header" id="admin-header" style="display:none">
-    <a href="index.html" class="back-btn">← Ana Sayfa</a>
+<!-- PANEL -->
+<div id="panel">
+  <div class="adm-header">
+    <a href="index.html">← Ana Sayfa</a>
     <h1>Admin 🔐</h1>
-</header>
+  </div>
 
-<div id="admin-panel">
-    <!-- Sekmeler -->
-    <div class="admin-tabs">
-        <button class="tab-btn active" onclick="switchTab('photos')">📸 Fotoğraflar</button>
-        <button class="tab-btn" onclick="switchTab('questions')">💬 Sorular</button>
-        <button class="tab-btn" onclick="switchTab('settings')">⚙️ Ayarlar</button>
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('photos',this)">📸 Fotoğraflar</button>
+    <button class="tab"    onclick="switchTab('questions',this)">💬 Sorular</button>
+    <button class="tab"    onclick="switchTab('settings',this)">⚙️ Ayarlar</button>
+  </div>
+
+  <!-- ── PHOTOS ── -->
+  <div class="tab-panel on" id="tab-photos">
+    <div class="card">
+      <h3>Fotoğraf Ekle</h3>
+      <div class="frow">
+        <div class="fg">
+          <label>Fotoğraf URL'i</label>
+          <input class="fi" id="ph-url" type="url" placeholder="https://..."
+                 oninput="previewPhoto(this.value)">
+        </div>
+        <div class="fg">
+          <label>Bölüm</label>
+          <select class="fs" id="ph-sec">
+            <option value="ilk">📖 İlk Günlerimiz</option>
+            <option value="macera">🌍 Maceralarımız</option>
+            <option value="gundelik">☀️ Gündelik Sihir</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Açıklama (isteğe bağlı)</label>
+        <input class="fi" id="ph-cap" placeholder="Bu anın hikayesi...">
+      </div>
+      <div id="photo-prev-wrap"><img id="photo-prev-img" src="" alt=""></div>
+      <button class="btn btn-p" id="add-ph-btn" onclick="addPhotoFn()">+ Fotoğraf Ekle</button>
     </div>
 
-    <!-- ── Fotoğraflar ── -->
-    <div class="tab-panel active" id="tab-photos">
-        <div class="admin-card">
-            <h3>Fotoğraf Ekle</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>FOTOĞRAF URL'İ</label>
-                    <input class="form-input" id="photo-url" placeholder="https://..." type="url">
-                </div>
-                <div class="form-group">
-                    <label>BÖLÜM</label>
-                    <select class="form-select" id="photo-section">
-                        <option value="ilk">📖 İlk Günlerimiz</option>
-                        <option value="macera">🌍 Maceralarımız</option>
-                        <option value="gundelik">☀️ Gündelik Sihir</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>AÇIKLAMA (isteğe bağlı)</label>
-                <input class="form-input" id="photo-caption" placeholder="Bu anın hikayesi...">
-            </div>
-            <!-- URL önizleme -->
-            <div id="photo-preview-wrap" style="display:none;margin-bottom:10px">
-                <img id="photo-preview-img" style="max-height:120px;border-radius:10px;object-fit:cover" src="" alt="">
-            </div>
-            <button class="btn btn-primary" id="add-photo-btn" onclick="addPhotoHandler()">+ Fotoğraf Ekle</button>
-        </div>
+    <div class="card">
+      <h3>Mevcut Fotoğraflar</h3>
+      <div id="photos-wrap"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
 
-        <div class="admin-card">
-            <h3>Mevcut Fotoğraflar</h3>
-            <div id="photos-loading" style="text-align:center;padding:20px"><div class="spinner"></div></div>
-            <div id="photos-list"></div>
+  <!-- ── QUESTIONS ── -->
+  <div class="tab-panel" id="tab-questions">
+    <div class="card">
+      <h3>Yeni Soru Ekle</h3>
+      <div class="fg">
+        <label>Soru Metni</label>
+        <textarea class="ft" id="q-txt" placeholder="Soru buraya..."></textarea>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Seçenek A</label><input class="fi" id="q-o0" placeholder="A şıkkı"></div>
+        <div class="fg"><label>Seçenek B</label><input class="fi" id="q-o1" placeholder="B şıkkı"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Seçenek C</label><input class="fi" id="q-o2" placeholder="C şıkkı (isteğe bağlı)"></div>
+        <div class="fg"><label>Seçenek D</label><input class="fi" id="q-o3" placeholder="D şıkkı (isteğe bağlı)"></div>
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <label>Doğru Cevap</label>
+          <select class="fs" id="q-ans">
+            <option value="0">A</option><option value="1">B</option>
+            <option value="2">C</option><option value="3">D</option>
+          </select>
         </div>
+        <div class="fg"><label>Puan</label><input class="fi" id="q-pts" type="number" value="10" min="1" max="100"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Doğru Mesajı</label><input class="fi" id="q-ok" placeholder="✅ Doğru!"></div>
+        <div class="fg"><label>Yanlış Mesajı</label><input class="fi" id="q-bad" placeholder="❌ Yanlış."></div>
+      </div>
+      <button class="btn btn-p" onclick="addQFn()">+ Soru Ekle</button>
     </div>
 
-    <!-- ── Sorular ── -->
-    <div class="tab-panel" id="tab-questions">
-        <div class="admin-card">
-            <h3>Yeni Soru Ekle</h3>
-            <div class="form-group">
-                <label>SORU METNİ</label>
-                <textarea class="form-textarea" id="q-text" placeholder="Soru buraya..."></textarea>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>SEÇENEK A</label>
-                    <input class="form-input" id="q-opt0" placeholder="A şıkkı">
-                </div>
-                <div class="form-group">
-                    <label>SEÇENEK B</label>
-                    <input class="form-input" id="q-opt1" placeholder="B şıkkı">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>SEÇENEK C</label>
-                    <input class="form-input" id="q-opt2" placeholder="C şıkkı (isteğe bağlı)">
-                </div>
-                <div class="form-group">
-                    <label>SEÇENEK D</label>
-                    <input class="form-input" id="q-opt3" placeholder="D şıkkı (isteğe bağlı)">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>DOĞRU CEVAP</label>
-                    <select class="form-select" id="q-answer">
-                        <option value="0">A</option>
-                        <option value="1">B</option>
-                        <option value="2">C</option>
-                        <option value="3">D</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>PUAN</label>
-                    <input class="form-input" id="q-points" type="number" value="10" min="1" max="100">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>DOĞRU CEVAP MESAJI</label>
-                <input class="form-input" id="q-ok" placeholder="✅ Doğru! +10 puan!">
-            </div>
-            <div class="form-group">
-                <label>YANLIŞ CEVAP MESAJI</label>
-                <input class="form-input" id="q-bad" placeholder="❌ Yanlış. (0 puan)">
-            </div>
-            <button class="btn btn-primary" onclick="addQuestionHandler()">+ Soru Ekle</button>
-        </div>
+    <div class="card">
+      <h3>Mevcut Sorular</h3>
+      <div id="questions-wrap"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
 
-        <div class="admin-card">
-            <h3>Mevcut Sorular</h3>
-            <div id="questions-loading" style="text-align:center;padding:20px"><div class="spinner"></div></div>
-            <div id="questions-list"></div>
-        </div>
+  <!-- ── SETTINGS ── -->
+  <div class="tab-panel" id="tab-settings">
+
+    <!-- Site şifresi -->
+    <div class="card">
+      <h3>🔑 Site Giriş Şifresi</h3>
+      <p style="font-size:.84rem;color:var(--txm);margin-bottom:14px">Zeynep'in siteye girişte göreceği şifre. Boş bırakırsan şifre sorulmaz.</p>
+      <div class="fg"><label>Şifre</label><input class="fi" id="s-pwd" type="text" placeholder="örn: seviyorum123"></div>
+      <button class="btn btn-p" onclick="savePwd()">Şifreyi Kaydet ✓</button>
     </div>
 
-    <!-- ── Ayarlar ── -->
-    <div class="tab-panel" id="tab-settings">
-
-        <!-- Site şifresi -->
-        <div class="admin-card">
-            <h3>🔑 Site Giriş Şifresi</h3>
-            <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">
-                Siteye girişte Zeynep'ten sorulacak şifre. Boş bırakırsan şifre sorulmaz.
-            </p>
-            <div class="form-group">
-                <label>ŞİFRE</label>
-                <input class="form-input" id="s-site-pwd" type="text" placeholder="örn: seviyorum123">
-            </div>
-            <button class="btn btn-primary" onclick="saveSitePassword()">Şifreyi Kaydet ✓</button>
-        </div>
-
-        <!-- Arka fon -->
-        <div class="admin-card">
-            <h3>🎨 Arka Fon</h3>
-            <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">
-                Hazır bir tema seç ya da kendi CSS gradyanını veya fotoğrafını gir.
-            </p>
-
-            <label style="font-size:.78rem;color:var(--muted);font-weight:700;letter-spacing:1px;display:block;margin-bottom:8px">HAZIR TEMALAR</label>
-            <div class="bg-presets">
-                <div class="bg-swatch" title="Pembe-Leylak"
-                     style="background:linear-gradient(135deg,#ffb6c1 0%,#c8a2c8 55%,#ffc8d4 100%)"
-                     data-value="linear-gradient(135deg,#ffb6c1 0%,#c8a2c8 55%,#ffc8d4 100%)"
-                     onclick="selectSwatch(this.dataset.value)"></div>
-                <div class="bg-swatch" title="Gün Batımı"
-                     style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%)"
-                     data-value="linear-gradient(135deg,#f093fb 0%,#f5576c 100%)"
-                     onclick="selectSwatch(this.dataset.value)"></div>
-                <div class="bg-swatch" title="Okyanus"
-                     style="background:linear-gradient(135deg,#43cea2 0%,#185a9d 100%)"
-                     data-value="linear-gradient(135deg,#43cea2 0%,#185a9d 100%)"
-                     onclick="selectSwatch(this.dataset.value)"></div>
-                <div class="bg-swatch" title="Kiraz Çiçeği"
-                     style="background:linear-gradient(135deg,#ff9a9e 0%,#fad0c4 50%,#ffecd2 100%)"
-                     data-value="linear-gradient(135deg,#ff9a9e 0%,#fad0c4 50%,#ffecd2 100%)"
-                     onclick="selectSwatch(this.dataset.value)"></div>
-                <div class="bg-swatch" title="Lavanta"
-                     style="background:linear-gradient(135deg,#a18cd1 0%,#fbc2eb 100%)"
-                     data-value="linear-gradient(135deg,#a18cd1 0%,#fbc2eb 100%)"
-                     onclick="selectSwatch(this.dataset.value)"></div>
-                <div class="bg-swatch" title="Nane"
-                     style="background:linear-gradient(135deg,#84fab0 0%,#8fd3f4 100%)"
-                     data-value="linear-gradient(135deg,#84fab0 0%,#8fd3f4 100%)"
-                     onclick="selectSwatch(this.dataset.value)"></div>
-                <div class="bg-swatch" title="Altın Saat"
-                     style="background:linear-gradient(135deg,#f5c842 0%,#ff9a9e 100%)"
-                     data-value="linear-gradient(135deg,#f5c842 0%,#ff9a9e 100%)"
-                     onclick="selectSwatch(this.dataset.value)"></div>
-            </div>
-
-            <div class="form-group">
-                <label>ÖZEL CSS GRADİYAN</label>
-                <input class="form-input" id="s-bg-custom" placeholder="linear-gradient(135deg, #fff 0%, #ffd 100%)"
-                       oninput="document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('selected'))">
-            </div>
-
-            <div class="form-group">
-                <label>FOTOĞRAF URL'İ (doldurursan fotoğraf önceliklidir)</label>
-                <input class="form-input" id="s-bg-img" type="url" placeholder="https://..."
-                       oninput="document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('selected'))">
-            </div>
-
-            <div id="bg-preview-bar" style="height:42px;border-radius:10px;margin-bottom:12px;display:none;border:2px solid #ede4f5"></div>
-
-            <button class="btn btn-primary" onclick="saveBackground()">Arka Fonu Kaydet ✓</button>
-        </div>
-
-        <!-- Oyuncu bilgileri -->
-        <div class="admin-card">
-            <h3>🎮 Oyuncu Bilgileri</h3>
-            <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">
-                Bu fotoğraflar ve isimler tüm oyunlarda kullanılır. Albümden bir fotoğraf seçebilirsin.
-            </p>
-
-            <!-- Oyuncu 1 -->
-            <div class="settings-game">
-                <h4>Oyuncu 1 (Ahmet)</h4>
-                <div class="player-setting-row">
-                    <div class="player-preview" id="p1-preview-wrap">A</div>
-                    <div class="form-group" style="margin:0">
-                        <label>FOTOĞRAF URL'İ</label>
-                        <input class="form-input" id="s-p1-img" placeholder="https://..." oninput="previewPlayerImg('p1-preview-wrap', this.value, 'A')">
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="openPhotoPicker('p1')" style="flex-shrink:0;white-space:nowrap">📸 Seç</button>
-                </div>
-                <div class="form-group">
-                    <label>İSİM</label>
-                    <input class="form-input" id="s-p1-name" placeholder="Ahmet">
-                </div>
-            </div>
-
-            <!-- Oyuncu 2 -->
-            <div class="settings-game">
-                <h4>Oyuncu 2 (Zeynep)</h4>
-                <div class="player-setting-row">
-                    <div class="player-preview" id="p2-preview-wrap" style="background:linear-gradient(135deg,#c8a2c8,#ffd49e)">Z</div>
-                    <div class="form-group" style="margin:0">
-                        <label>FOTOĞRAF URL'İ</label>
-                        <input class="form-input" id="s-p2-img" placeholder="https://..." oninput="previewPlayerImg('p2-preview-wrap', this.value, 'Z')">
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="openPhotoPicker('p2')" style="flex-shrink:0;white-space:nowrap">📸 Seç</button>
-                </div>
-                <div class="form-group">
-                    <label>İSİM</label>
-                    <input class="form-input" id="s-p2-name" placeholder="Zeynep">
-                </div>
-            </div>
-
-            <button class="btn btn-primary btn-block" onclick="saveSettings()">Oyuncu Bilgilerini Kaydet ✓</button>
-        </div>
+    <!-- Arka fon -->
+    <div class="card">
+      <h3>🎨 Arka Fon</h3>
+      <p style="font-size:.84rem;color:var(--txm);margin-bottom:14px">Hazır tema seç ya da özel gradyan/fotoğraf gir.</p>
+      <label style="font-size:.75rem;font-weight:700;letter-spacing:1px;color:var(--txm);display:block;margin-bottom:8px">HAZIR TEMALAR</label>
+      <div class="swatches">
+        <div class="sw" title="Pembe-Leylak" style="background:linear-gradient(135deg,#ffb6c1,#c8a2c8,#ffc8d4)" data-v="linear-gradient(135deg,#ffb6c1,#c8a2c8,#ffc8d4)" onclick="pickSwatch(this)"></div>
+        <div class="sw" title="Gün Batımı"  style="background:linear-gradient(135deg,#f093fb,#f5576c)" data-v="linear-gradient(135deg,#f093fb,#f5576c)" onclick="pickSwatch(this)"></div>
+        <div class="sw" title="Okyanus"     style="background:linear-gradient(135deg,#43cea2,#185a9d)" data-v="linear-gradient(135deg,#43cea2,#185a9d)" onclick="pickSwatch(this)"></div>
+        <div class="sw" title="Kiraz"       style="background:linear-gradient(135deg,#ff9a9e,#fad0c4,#ffecd2)" data-v="linear-gradient(135deg,#ff9a9e,#fad0c4,#ffecd2)" onclick="pickSwatch(this)"></div>
+        <div class="sw" title="Lavanta"     style="background:linear-gradient(135deg,#a18cd1,#fbc2eb)" data-v="linear-gradient(135deg,#a18cd1,#fbc2eb)" onclick="pickSwatch(this)"></div>
+        <div class="sw" title="Nane"        style="background:linear-gradient(135deg,#84fab0,#8fd3f4)" data-v="linear-gradient(135deg,#84fab0,#8fd3f4)" onclick="pickSwatch(this)"></div>
+        <div class="sw" title="Altın"       style="background:linear-gradient(135deg,#f5c842,#ff9a9e)" data-v="linear-gradient(135deg,#f5c842,#ff9a9e)" onclick="pickSwatch(this)"></div>
+      </div>
+      <div class="fg"><label>Özel Gradyan</label><input class="fi" id="s-bg-grad" placeholder="linear-gradient(135deg, #fff 0%, #ffd 100%)" oninput="updateBgPrev()"></div>
+      <div class="fg"><label>Fotoğraf URL'i (önceliklidir)</label><input class="fi" id="s-bg-img" type="url" placeholder="https://..." oninput="updateBgPrev()"></div>
+      <div id="bg-prev"></div>
+      <button class="btn btn-p" onclick="saveBg()">Arka Fonu Kaydet ✓</button>
     </div>
+
+    <!-- Oyuncu bilgileri -->
+    <div class="card">
+      <h3>🎮 Oyuncu Bilgileri</h3>
+      <p style="font-size:.84rem;color:var(--txm);margin-bottom:16px">Tüm oyunlarda kullanılır. Albümden fotoğraf seçebilirsin.</p>
+
+      <p style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--tx);margin-bottom:10px">Oyuncu 1 (Ahmet)</p>
+      <div class="pr">
+        <div class="avatar" id="av1">A</div>
+        <div class="fg" style="margin:0"><label>Fotoğraf URL'i</label>
+          <input class="fi" id="s-p1-img" placeholder="https://..." oninput="prevAv('av1',this.value,'A')"></div>
+        <button class="btn btn-s btn-sm" onclick="openPicker('p1')">📸 Seç</button>
+      </div>
+      <div class="fg"><label>İsim</label><input class="fi" id="s-p1-name" placeholder="Ahmet"></div>
+
+      <p style="font-family:'Playfair Display',serif;font-size:.9rem;color:var(--tx);margin:16px 0 10px">Oyuncu 2 (Zeynep)</p>
+      <div class="pr">
+        <div class="avatar" id="av2" style="background:linear-gradient(135deg,#c8a2c8,#ffd49e)">Z</div>
+        <div class="fg" style="margin:0"><label>Fotoğraf URL'i</label>
+          <input class="fi" id="s-p2-img" placeholder="https://..." oninput="prevAv('av2',this.value,'Z')"></div>
+        <button class="btn btn-s btn-sm" onclick="openPicker('p2')">📸 Seç</button>
+      </div>
+      <div class="fg"><label>İsim</label><input class="fi" id="s-p2-name" placeholder="Zeynep"></div>
+
+      <button class="btn btn-p btn-block" onclick="savePlayersFn()">Oyuncu Bilgilerini Kaydet ✓</button>
+    </div>
+  </div>
 </div>
 
-<!-- Fotoğraf seçici modal -->
-<div class="modal-overlay" id="photo-picker-modal">
-    <div class="modal-box">
-        <button class="modal-close" onclick="closePhotoPicker()">✕</button>
-        <h2>Albümden Fotoğraf Seç</h2>
-        <p style="font-size:.84rem;color:var(--muted);margin-top:4px">Bir fotoğrafa tıkla, oyuncu görseli olarak ayarlanır.</p>
-        <div class="photo-picker-grid" id="picker-grid"></div>
+<!-- EDIT MODAL -->
+<div class="modal" id="edit-modal">
+  <div class="mbox">
+    <button class="mclose" onclick="closeEdit()">✕</button>
+    <h2>Soruyu Düzenle</h2>
+    <input type="hidden" id="edit-id">
+    <div class="fg"><label>Soru Metni</label><textarea class="ft" id="edit-txt"></textarea></div>
+    <div class="frow">
+      <div class="fg"><label>Seçenek A</label><input class="fi" id="edit-o0"></div>
+      <div class="fg"><label>Seçenek B</label><input class="fi" id="edit-o1"></div>
     </div>
+    <div class="frow">
+      <div class="fg"><label>Seçenek C</label><input class="fi" id="edit-o2"></div>
+      <div class="fg"><label>Seçenek D</label><input class="fi" id="edit-o3"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Doğru Cevap</label>
+        <select class="fs" id="edit-ans">
+          <option value="0">A</option><option value="1">B</option>
+          <option value="2">C</option><option value="3">D</option>
+        </select>
+      </div>
+      <div class="fg"><label>Puan</label><input class="fi" id="edit-pts" type="number" min="1" max="100"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Doğru Mesajı</label><input class="fi" id="edit-ok"></div>
+      <div class="fg"><label>Yanlış Mesajı</label><input class="fi" id="edit-bad"></div>
+    </div>
+    <button class="btn btn-p btn-block" onclick="saveEdit()">Kaydet ✓</button>
+  </div>
 </div>
 
-<!-- Soru düzenleme modalı -->
-<div class="modal-overlay" id="edit-modal">
-    <div class="modal-box">
-        <button class="modal-close" onclick="closeEditModal()">✕</button>
-        <h2>Soruyu Düzenle</h2>
-        <input type="hidden" id="edit-q-id">
-        <div class="form-group">
-            <label>SORU METNİ</label>
-            <textarea class="form-textarea" id="edit-q-text"></textarea>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>SEÇENEK A</label><input class="form-input" id="edit-q-opt0">
-            </div>
-            <div class="form-group">
-                <label>SEÇENEK B</label><input class="form-input" id="edit-q-opt1">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>SEÇENEK C</label><input class="form-input" id="edit-q-opt2">
-            </div>
-            <div class="form-group">
-                <label>SEÇENEK D</label><input class="form-input" id="edit-q-opt3">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>DOĞRU CEVAP</label>
-                <select class="form-select" id="edit-q-answer">
-                    <option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>PUAN</label>
-                <input class="form-input" id="edit-q-points" type="number" min="1" max="100">
-            </div>
-        </div>
-        <div class="form-group">
-            <label>DOĞRU MESAJ</label>
-            <input class="form-input" id="edit-q-ok">
-        </div>
-        <div class="form-group">
-            <label>YANLIŞ MESAJ</label>
-            <input class="form-input" id="edit-q-bad">
-        </div>
-        <button class="btn btn-primary btn-block" onclick="saveEditedQuestion()">Kaydet ✓</button>
-    </div>
+<!-- PICKER MODAL -->
+<div class="modal" id="picker-modal">
+  <div class="mbox">
+    <button class="mclose" onclick="closePicker()">✕</button>
+    <h2>Albümden Fotoğraf Seç</h2>
+    <p style="font-size:.84rem;color:var(--txm);margin-top:4px">Bir fotoğrafa tıkla, oyuncu görseli olarak ayarlanır.</p>
+    <div class="picker-grid" id="picker-grid"></div>
+  </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="firebase.js"></script>
+<script src="supabase.js"></script>
 <script>
-    startParticles('particles');
-    applySiteBackground();
+/* ── INIT ── */
+applySiteBackground();
 
-    /* ── Şifre kontrol ──────────────────────────────────────────── */
-    function checkPw() {
-        const val = document.getElementById('pw-input').value;
-        if (checkAdminPassword(val)) {
-            document.getElementById('admin-lock').style.display   = 'none';
-            document.getElementById('admin-header').style.display = '';
-            document.getElementById('admin-panel').style.display  = 'block';
-            loadAll();
-        } else {
-            document.getElementById('pw-error').textContent = 'Şifre yanlış.';
-            document.getElementById('pw-input').value = '';
-        }
-    }
+/* ── ŞİFRE ── */
+function checkPw() {
+  const v = document.getElementById('pw-in').value;
+  if (checkAdminPassword(v)) {
+    document.getElementById('lock').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+    loadAll();
+  } else {
+    document.getElementById('pw-err').textContent = 'Şifre yanlış.';
+    document.getElementById('pw-in').value = '';
+    document.getElementById('pw-in').focus();
+  }
+}
 
-    /* ── Sekme geçişi ───────────────────────────────────────────── */
-    function switchTab(name) {
-        document.querySelectorAll('.tab-btn').forEach((b, i) => {
-            b.classList.toggle('active', ['photos','questions','settings'][i] === name);
-        });
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-        document.getElementById(`tab-${name}`).classList.add('active');
-    }
+/* ── TABS ── */
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('tab-' + name).classList.add('on');
+}
 
-    /* ── İlk yükleme ────────────────────────────────────────────── */
-    async function loadAll() {
-        bindPhotoUrlPreview();
-        bindBgInputs();
-        loadPhotosAdmin();
-        loadQuestionsAdmin();
-        loadSettingsAdmin();
-    }
+/* ── LOAD ALL ── */
+async function loadAll() {
+  renderPhotos();
+  renderQuestions();
+  loadSettingsFn();
+}
 
-    /* ══════════════════════════════════════════════════════════════
-       FOTOĞRAFLAR
-    ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════
+   FOTOĞRAFLAR
+══════════════════════════════ */
+const SECS = { ilk:'📖 İlk Günlerimiz', macera:'🌍 Maceralarımız', gundelik:'☀️ Gündelik Sihir' };
 
-    const SECTION_NAMES = {
-        ilk:      '📖 İlk Günlerimiz',
-        macera:   '🌍 Maceralarımız',
-        gundelik: '☀️ Gündelik Sihir'
-    };
+function previewPhoto(url) {
+  const wrap = document.getElementById('photo-prev-wrap');
+  const img  = document.getElementById('photo-prev-img');
+  if (url) { wrap.style.display = ''; img.src = url; img.onerror = () => wrap.style.display = 'none'; }
+  else wrap.style.display = 'none';
+}
 
-    // URL önizleme — panel açıldıktan sonra bağlanır
-    function bindPhotoUrlPreview() {
-        const input = document.getElementById('photo-url');
-        if (!input) return;
-        input.addEventListener('input', function() {
-            const wrap = document.getElementById('photo-preview-wrap');
-            const img  = document.getElementById('photo-preview-img');
-            if (this.value) {
-                wrap.style.display = '';
-                img.src = this.value;
-                img.onerror = () => { wrap.style.display = 'none'; };
-            } else {
-                wrap.style.display = 'none';
-            }
-        });
-    }
+async function addPhotoFn() {
+  const url = document.getElementById('ph-url').value.trim();
+  const sec = document.getElementById('ph-sec').value;
+  const cap = document.getElementById('ph-cap').value.trim();
+  if (!url) { toast('URL boş olamaz.'); return; }
+  const btn = document.getElementById('add-ph-btn');
+  btn.disabled = true; btn.textContent = 'Ekleniyor...';
+  try {
+    await addPhoto(url, sec, cap);
+    document.getElementById('ph-url').value = '';
+    document.getElementById('ph-cap').value = '';
+    document.getElementById('photo-prev-wrap').style.display = 'none';
+    toast('Fotoğraf eklendi! ✓');
+    renderPhotos();
+  } catch(e) { toast('Hata: ' + e.message); }
+  btn.disabled = false; btn.textContent = '+ Fotoğraf Ekle';
+}
 
-    async function addPhotoHandler() {
-        const url     = document.getElementById('photo-url').value.trim();
-        const section = document.getElementById('photo-section').value;
-        const caption = document.getElementById('photo-caption').value.trim();
-        if (!url) { showToast('URL boş olamaz.'); return; }
+async function renderPhotos() {
+  const wrap = document.getElementById('photos-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const photos = await loadPhotos();
+  if (!photos.length) { wrap.innerHTML = '<p style="text-align:center;color:var(--txm);font-style:italic;padding:20px">Henüz fotoğraf yok</p>'; return; }
+  const grouped = { ilk:[], macera:[], gundelik:[] };
+  photos.forEach(p => { if (grouped[p.section]) grouped[p.section].push(p); });
+  let html = '';
+  ['ilk','macera','gundelik'].forEach(s => {
+    const list = grouped[s];
+    html += `<div class="sec-label">${SECS[s]} — ${list.length} fotoğraf</div><div class="pg">`;
+    list.forEach(p => {
+      html += `<div class="pi"><img src="${p.url}" alt="${p.caption||''}" loading="lazy" onerror="this.style.display='none'"><button class="del" onclick="delPhotoFn('${p.id}')">✕</button></div>`;
+    });
+    if (!list.length) html += `<div style="grid-column:1/-1;text-align:center;padding:12px;color:var(--txm);font-style:italic;font-size:.84rem">Bu bölümde fotoğraf yok</div>`;
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
+}
 
-        const btn = document.getElementById('add-photo-btn');
-        btn.disabled = true; btn.textContent = 'Ekleniyor...';
-        try {
-            await addPhoto(url, section, caption);
-            document.getElementById('photo-url').value      = '';
-            document.getElementById('photo-caption').value  = '';
-            document.getElementById('photo-preview-wrap').style.display = 'none';
-            showToast('Fotoğraf eklendi! ✓');
-            loadPhotosAdmin();
-        } catch (e) { showToast('Hata: ' + e.message); }
-        btn.disabled = false; btn.textContent = '+ Fotoğraf Ekle';
-    }
+async function delPhotoFn(id) {
+  if (!confirm('Bu fotoğrafı silmek istediğine emin misin?')) return;
+  await deletePhoto(id);
+  toast('Silindi.');
+  renderPhotos();
+}
 
-    async function loadPhotosAdmin() {
-        document.getElementById('photos-loading').style.display = '';
-        document.getElementById('photos-list').innerHTML = '';
-        const photos = await loadPhotos();
-        document.getElementById('photos-loading').style.display = 'none';
+/* ══════════════════════════════
+   SORULAR
+══════════════════════════════ */
+async function addQFn() {
+  const q    = document.getElementById('q-txt').value.trim();
+  const opts = [0,1,2,3].map(i => document.getElementById('q-o'+i).value.trim());
+  if (!q || !opts[0] || !opts[1]) { toast('En az soru ve 2 şık gerekli.'); return; }
+  try {
+    await addQuestion({
+      question: q, options: opts,
+      answer: +document.getElementById('q-ans').value,
+      points: +document.getElementById('q-pts').value || 10,
+      okMsg:  document.getElementById('q-ok').value.trim()  || '✅ Doğru!',
+      badMsg: document.getElementById('q-bad').value.trim() || '❌ Yanlış.'
+    });
+    ['q-txt','q-o0','q-o1','q-o2','q-o3','q-ok','q-bad'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('q-pts').value = '10';
+    toast('Soru eklendi! ✓');
+    renderQuestions();
+  } catch(e) { toast('Hata: ' + e.message); }
+}
 
-        const grouped = { ilk:[], macera:[], gundelik:[] };
-        photos.forEach(p => { if (grouped[p.section]) grouped[p.section].push(p); });
+async function renderQuestions() {
+  const wrap = document.getElementById('questions-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const qs = await loadQuestions();
+  if (!qs.length) { wrap.innerHTML = '<p style="text-align:center;color:var(--txm);font-style:italic;padding:20px">Henüz soru yok</p>'; return; }
+  wrap.innerHTML = qs.map((q,i) => `
+    <div class="qr">
+      <div class="qr-text">
+        <strong>${i+1}. ${q.question}</strong>
+        <span>${(q.options||[]).map((o,j)=>`${['A','B','C','D'][j]}) ${o}`).filter(Boolean).join(' · ')}</span><br>
+        <span style="color:var(--li)">Doğru: ${['A','B','C','D'][q.answer||0]} · ${q.points||10} puan</span>
+      </div>
+      <div class="qr-acts">
+        <button class="btn btn-s btn-sm" onclick="openEdit('${q.id}')">Düzenle</button>
+        <button class="btn btn-d btn-sm" onclick="delQFn('${q.id}')">Sil</button>
+      </div>
+    </div>`).join('');
+}
 
-        let html = '';
-        ['ilk','macera','gundelik'].forEach(sec => {
-            const list = grouped[sec];
-            html += `<div style="margin-bottom:18px">
-                <div class="photo-section-label">${SECTION_NAMES[sec]} — ${list.length} fotoğraf</div>
-                <div class="photo-grid-admin">`;
-            list.forEach(p => {
-                html += `
-                <div class="photo-admin-item">
-                    <img src="${p.url}" alt="${p.caption||''}" loading="lazy"
-                         onerror="this.src='';this.style.background='#ede4f5'">
-                    <button class="del-photo-btn" onclick="delPhoto('${p.id}')">✕</button>
-                </div>`;
-            });
-            if (!list.length) html += `<div style="grid-column:1/-1;text-align:center;padding:12px 0;color:var(--muted);font-size:.84rem;font-style:italic">Henüz fotoğraf yok</div>`;
-            html += `</div></div>`;
-        });
+async function delQFn(id) {
+  if (!confirm('Bu soruyu silmek istediğine emin misin?')) return;
+  await deleteQuestion(id);
+  toast('Soru silindi.');
+  renderQuestions();
+}
 
-        document.getElementById('photos-list').innerHTML = html;
-    }
+/* edit modal */
+let _allQ = [];
+async function openEdit(id) {
+  _allQ = await loadQuestions();
+  const q = _allQ.find(x => x.id === id);
+  if (!q) return;
+  document.getElementById('edit-id').value  = id;
+  document.getElementById('edit-txt').value = q.question || '';
+  document.getElementById('edit-ans').value = String(q.answer ?? 0);
+  document.getElementById('edit-pts').value = String(q.points ?? 10);
+  document.getElementById('edit-ok').value  = q.okMsg  || '';
+  document.getElementById('edit-bad').value = q.badMsg || '';
+  [0,1,2,3].forEach(i => document.getElementById('edit-o'+i).value = (q.options||[])[i]||'');
+  document.getElementById('edit-modal').classList.add('on');
+}
+function closeEdit() { document.getElementById('edit-modal').classList.remove('on'); }
+async function saveEdit() {
+  const id = document.getElementById('edit-id').value;
+  await updateQuestion(id, {
+    question: document.getElementById('edit-txt').value.trim(),
+    options:  [0,1,2,3].map(i => document.getElementById('edit-o'+i).value.trim()),
+    answer:   +document.getElementById('edit-ans').value,
+    points:   +document.getElementById('edit-pts').value || 10,
+    okMsg:    document.getElementById('edit-ok').value.trim(),
+    badMsg:   document.getElementById('edit-bad').value.trim()
+  });
+  closeEdit();
+  toast('Soru güncellendi! ✓');
+  renderQuestions();
+}
 
-    async function delPhoto(id) {
-        if (!confirm('Bu fotoğrafı silmek istediğine emin misin?')) return;
-        await deletePhoto(id);
-        showToast('Silindi.');
-        loadPhotosAdmin();
-    }
+/* ══════════════════════════════
+   AYARLAR
+══════════════════════════════ */
+async function loadSettingsFn() {
+  const s = await loadSettings();
+  document.getElementById('s-pwd').value    = s.site_password || '';
+  document.getElementById('s-p1-img').value = s.xox_player1_img  || '';
+  document.getElementById('s-p2-img').value = s.xox_player2_img  || '';
+  document.getElementById('s-p1-name').value= s.xox_player1_name || '';
+  document.getElementById('s-p2-name').value= s.xox_player2_name || '';
+  if (s.xox_player1_img) prevAv('av1', s.xox_player1_img, 'A');
+  if (s.xox_player2_img) prevAv('av2', s.xox_player2_img, 'Z');
+  if (s.bg_type === 'gradient' && s.bg_value) {
+    document.getElementById('s-bg-grad').value = s.bg_value;
+    updateBgPrev();
+  } else if (s.bg_type === 'image' && s.bg_value) {
+    document.getElementById('s-bg-img').value = s.bg_value;
+    updateBgPrev();
+  }
+}
 
-    /* ══════════════════════════════════════════════════════════════
-       SORULAR
-    ══════════════════════════════════════════════════════════════ */
+async function savePwd() {
+  const pwd = document.getElementById('s-pwd').value.trim();
+  await updateSettings({ site_password: pwd });
+  toast(pwd ? 'Site şifresi kaydedildi! ✓' : 'Şifre kaldırıldı.');
+}
 
-    async function addQuestionHandler() {
-        const q    = document.getElementById('q-text').value.trim();
-        const opts = [0,1,2,3].map(i => document.getElementById(`q-opt${i}`).value.trim()).filter(Boolean);
-        if (!q || opts.length < 2) { showToast('En az soru ve 2 şık gerekli.'); return; }
+async function savePlayersFn() {
+  const p1img  = document.getElementById('s-p1-img').value.trim();
+  const p2img  = document.getElementById('s-p2-img').value.trim();
+  const p1name = document.getElementById('s-p1-name').value.trim() || 'Ahmet';
+  const p2name = document.getElementById('s-p2-name').value.trim() || 'Zeynep';
+  await updateSettings({
+    xox_player1_img:p1img, xox_player2_img:p2img,
+    amiral_player1_img:p1img, amiral_player2_img:p2img,
+    c4_player1_img:p1img, c4_player2_img:p2img,
+    xox_player1_name:p1name, xox_player2_name:p2name,
+    amiral_player1_name:p1name, amiral_player2_name:p2name,
+    c4_player1_name:p1name, c4_player2_name:p2name
+  });
+  toast('Oyuncu bilgileri kaydedildi! ✓');
+}
 
-        await addQuestion({
-            question: q,
-            options:  [0,1,2,3].map(i => document.getElementById(`q-opt${i}`).value.trim()),
-            answer:   +document.getElementById('q-answer').value,
-            points:   +document.getElementById('q-points').value || 10,
-            okMsg:    document.getElementById('q-ok').value.trim()  || '✅ Doğru!',
-            badMsg:   document.getElementById('q-bad').value.trim() || '❌ Yanlış.'
-        });
+function prevAv(id, url, letter) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = url
+    ? `<img src="${url}" alt="" onerror="this.parentElement.textContent='${letter}'">`
+    : letter;
+}
 
-        ['q-text','q-opt0','q-opt1','q-opt2','q-opt3','q-ok','q-bad'].forEach(id => {
-            document.getElementById(id).value = '';
-        });
-        document.getElementById('q-points').value = '10';
-        showToast('Soru eklendi! ✓');
-        loadQuestionsAdmin();
-    }
+/* bg */
+let _bgSel = '';
+function pickSwatch(el) {
+  document.querySelectorAll('.sw').forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+  _bgSel = el.dataset.v;
+  document.getElementById('s-bg-grad').value = '';
+  document.getElementById('s-bg-img').value  = '';
+  const prev = document.getElementById('bg-prev');
+  prev.style.display = '';
+  prev.style.background = _bgSel;
+}
+function updateBgPrev() {
+  _bgSel = '';
+  document.querySelectorAll('.sw').forEach(s => s.classList.remove('on'));
+  const img  = document.getElementById('s-bg-img').value.trim();
+  const grad = document.getElementById('s-bg-grad').value.trim();
+  const prev = document.getElementById('bg-prev');
+  if (img)  { prev.style.display=''; prev.style.background=`url('${img}') center/cover`; }
+  else if (grad) { prev.style.display=''; prev.style.background=grad; }
+  else prev.style.display = 'none';
+}
+async function saveBg() {
+  const img  = document.getElementById('s-bg-img').value.trim();
+  const grad = document.getElementById('s-bg-grad').value.trim();
+  let type, value;
+  if (img)       { type='image';    value=img; }
+  else if (grad) { type='gradient'; value=grad; }
+  else if (_bgSel) { type='gradient'; value=_bgSel; }
+  else { toast('Bir tema seç veya değer gir.'); return; }
+  await updateSettings({ bg_type: type, bg_value: value });
+  localStorage.setItem('az_bg', JSON.stringify({ type, value }));
+  _applyBg({ type, value });
+  toast('Arka fon kaydedildi! ✓');
+}
 
-    async function loadQuestionsAdmin() {
-        document.getElementById('questions-loading').style.display = '';
-        document.getElementById('questions-list').innerHTML = '';
-        const questions = await loadQuestions();
-        document.getElementById('questions-loading').style.display = 'none';
+/* photo picker */
+let _pickerTarget = '';
+async function openPicker(target) {
+  _pickerTarget = target;
+  const grid = document.getElementById('picker-grid');
+  grid.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  document.getElementById('picker-modal').classList.add('on');
+  const photos = await loadPhotos();
+  if (!photos.length) { grid.innerHTML = '<p style="text-align:center;color:var(--txm);padding:20px;font-style:italic">Henüz albümde fotoğraf yok.</p>'; return; }
+  grid.innerHTML = photos.map(p =>
+    `<div class="picker-item" onclick="pickPhoto('${p.url.replace(/'/g,"\\'")}')">
+      <img src="${p.url}" alt="${(p.caption||'').replace(/</g,'&lt;')}" loading="lazy"
+           onerror="this.parentElement.style.display='none'">
+    </div>`).join('');
+}
+function pickPhoto(url) {
+  const n = _pickerTarget === 'p1' ? '1' : '2';
+  const letter = n === '1' ? 'A' : 'Z';
+  document.getElementById('s-p' + n + '-img').value = url;
+  prevAv('av' + n, url, letter);
+  closePicker();
+}
+function closePicker() { document.getElementById('picker-modal').classList.remove('on'); }
 
-        if (!questions.length) {
-            document.getElementById('questions-list').innerHTML =
-                '<p style="text-align:center;color:var(--muted);font-style:italic;padding:20px">Henüz soru yok</p>';
-            return;
-        }
+/* toast */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-        let html = '';
-        questions.forEach((q, i) => {
-            html += `
-            <div class="q-admin-row">
-                <div class="q-admin-text">
-                    <strong>${i+1}. ${q.question}</strong>
-                    <div style="margin-top:4px;font-size:.78rem;color:var(--muted)">
-                        ${(q.options||[]).map((o,j) => `${['A','B','C','D'][j]}) ${o}`).join(' · ')}
-                    </div>
-                    <div style="font-size:.76rem;color:var(--lilac);margin-top:3px">Doğru: ${['A','B','C','D'][q.answer||0]} · ${q.points||10} puan</div>
-                </div>
-                <div class="q-admin-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="openEditModal('${q.id}')">Düzenle</button>
-                    <button class="btn btn-danger btn-sm" onclick="delQuestion('${q.id}')">Sil</button>
-                </div>
-            </div>`;
-        });
-
-        document.getElementById('questions-list').innerHTML = html;
-    }
-
-    async function delQuestion(id) {
-        if (!confirm('Bu soruyu silmek istediğine emin misin?')) return;
-        await deleteQuestion(id);
-        showToast('Soru silindi.');
-        loadQuestionsAdmin();
-    }
-
-    /* ── Edit modal ─────────────────────────────────────────────── */
-    let allQuestions = [];
-
-    async function openEditModal(id) {
-        allQuestions = await loadQuestions();
-        const q = allQuestions.find(q => q.id === id);
-        if (!q) return;
-
-        document.getElementById('edit-q-id').value    = id;
-        document.getElementById('edit-q-text').value  = q.question || '';
-        document.getElementById('edit-q-answer').value = String(q.answer ?? 0);
-        document.getElementById('edit-q-points').value = String(q.points ?? 10);
-        document.getElementById('edit-q-ok').value    = q.okMsg || '';
-        document.getElementById('edit-q-bad').value   = q.badMsg || '';
-        [0,1,2,3].forEach(i => {
-            document.getElementById(`edit-q-opt${i}`).value = (q.options || [])[i] || '';
-        });
-
-        document.getElementById('edit-modal').classList.add('open');
-    }
-
-    function closeEditModal() {
-        document.getElementById('edit-modal').classList.remove('open');
-    }
-
-    async function saveEditedQuestion() {
-        const id   = document.getElementById('edit-q-id').value;
-        const data = {
-            question: document.getElementById('edit-q-text').value.trim(),
-            options:  [0,1,2,3].map(i => document.getElementById(`edit-q-opt${i}`).value.trim()),
-            answer:   +document.getElementById('edit-q-answer').value,
-            points:   +document.getElementById('edit-q-points').value || 10,
-            okMsg:    document.getElementById('edit-q-ok').value.trim(),
-            badMsg:   document.getElementById('edit-q-bad').value.trim()
-        };
-        await updateQuestion(id, data);
-        closeEditModal();
-        showToast('Soru güncellendi! ✓');
-        loadQuestionsAdmin();
-    }
-
-    /* ══════════════════════════════════════════════════════════════
-       AYARLAR
-    ══════════════════════════════════════════════════════════════ */
-
-    async function loadSettingsAdmin() {
-        const s = await loadSettings();
-
-        // Oyuncu bilgileri
-        document.getElementById('s-p1-img').value  = s.xox_player1_img  || s.amiral_player1_img || s.c4_player1_img  || '';
-        document.getElementById('s-p2-img').value  = s.xox_player2_img  || s.amiral_player2_img || s.c4_player2_img  || '';
-        document.getElementById('s-p1-name').value = s.xox_player1_name || 'Ahmet';
-        document.getElementById('s-p2-name').value = s.xox_player2_name || 'Zeynep';
-        if (s.xox_player1_img) previewPlayerImg('p1-preview-wrap', s.xox_player1_img, 'A');
-        if (s.xox_player2_img) previewPlayerImg('p2-preview-wrap', s.xox_player2_img, 'Z');
-
-        // Site şifresi
-        document.getElementById('s-site-pwd').value = s.site_password || '';
-
-        // Arka fon
-        if (s.bg_type === 'image') {
-            document.getElementById('s-bg-img').value = s.bg_value || '';
-        } else if (s.bg_type === 'gradient' && s.bg_value) {
-            // Hazır swatch mı yoksa özel mi?
-            const matchesSwatch = [...document.querySelectorAll('.bg-swatch')]
-                .some(sw => sw.dataset.value === s.bg_value);
-            if (matchesSwatch) {
-                highlightSwatch(s.bg_value);
-                _bgType = 'gradient'; _bgValue = s.bg_value;
-            } else {
-                document.getElementById('s-bg-custom').value = s.bg_value;
-            }
-        }
-        updateBgPreview(s.bg_type, s.bg_value);
-    }
-
-    function previewPlayerImg(wrapperId, url, fallbackLetter) {
-        const el = document.getElementById(wrapperId);
-        if (!el) return;
-        if (url) {
-            el.innerHTML = `<img src="${url}" alt="" onerror="this.parentElement.innerHTML='${fallbackLetter}'">`;
-        } else {
-            el.textContent = fallbackLetter;
-        }
-    }
-
-    async function saveSettings() {
-        const p1img  = document.getElementById('s-p1-img').value.trim();
-        const p2img  = document.getElementById('s-p2-img').value.trim();
-        const p1name = document.getElementById('s-p1-name').value.trim() || 'Ahmet';
-        const p2name = document.getElementById('s-p2-name').value.trim() || 'Zeynep';
-
-        const data = {
-            xox_player1_img:    p1img,  xox_player2_img:    p2img,
-            amiral_player1_img: p1img,  amiral_player2_img: p2img,
-            c4_player1_img:     p1img,  c4_player2_img:     p2img,
-            xox_player1_name:    p1name, xox_player2_name:    p2name,
-            amiral_player1_name: p1name, amiral_player2_name: p2name,
-            c4_player1_name:     p1name, c4_player2_name:     p2name
-        };
-
-        await updateSettings(data);
-        showToast('Ayarlar kaydedildi! ✓');
-    }
-
-    /* ══════════════════════════════════════════════════════════════
-       SİTE ŞİFRESİ
-    ══════════════════════════════════════════════════════════════ */
-
-    async function saveSitePassword() {
-        const pwd = document.getElementById('s-site-pwd').value.trim();
-        await updateSettings({ site_password: pwd });
-        showToast(pwd ? 'Site şifresi kaydedildi! ✓' : 'Şifre kaldırıldı — site artık şifresiz.');
-    }
-
-    /* ══════════════════════════════════════════════════════════════
-       ARKA FON
-    ══════════════════════════════════════════════════════════════ */
-
-    let _bgType  = 'gradient';
-    let _bgValue = '';
-
-    function selectSwatch(value) {
-        _bgType = 'gradient'; _bgValue = value;
-        document.getElementById('s-bg-custom').value = '';
-        document.getElementById('s-bg-img').value    = '';
-        highlightSwatch(value);
-        updateBgPreview('gradient', value);
-    }
-
-    function highlightSwatch(value) {
-        document.querySelectorAll('.bg-swatch').forEach(s => {
-            s.classList.toggle('selected', s.dataset.value === value);
-        });
-    }
-
-    function updateBgPreview(type, value) {
-        const bar = document.getElementById('bg-preview-bar');
-        if (!value) { bar.style.display = 'none'; return; }
-        bar.style.display = '';
-        if (type === 'image') {
-            bar.style.backgroundImage    = `url('${value}')`;
-            bar.style.backgroundSize     = 'cover';
-            bar.style.backgroundPosition = 'center';
-            bar.style.background         = '';
-        } else {
-            bar.style.background      = value;
-            bar.style.backgroundImage = '';
-        }
-    }
-
-    function bindBgInputs() {
-        const bgCustom = document.getElementById('s-bg-custom');
-        const bgImg    = document.getElementById('s-bg-img');
-        if (bgCustom) bgCustom.addEventListener('input', function() {
-            _bgType = 'gradient'; _bgValue = '';
-            highlightSwatch('');
-            updateBgPreview('gradient', this.value);
-        });
-        if (bgImg) bgImg.addEventListener('input', function() {
-            _bgType = 'image'; _bgValue = '';
-            highlightSwatch('');
-            updateBgPreview('image', this.value);
-        });
-    }
-
-    async function saveBackground() {
-        const imgUrl     = document.getElementById('s-bg-img').value.trim();
-        const customGrad = document.getElementById('s-bg-custom').value.trim();
-
-        let type, value;
-        if (imgUrl) {
-            type = 'image'; value = imgUrl;
-        } else if (customGrad) {
-            type = 'gradient'; value = customGrad;
-        } else if (_bgValue) {
-            type = _bgType; value = _bgValue;
-        } else {
-            showToast('Bir tema seç veya değer gir.'); return;
-        }
-
-        await updateSettings({ bg_type: type, bg_value: value });
-        localStorage.setItem('az_bg', JSON.stringify({ type, value }));
-        _applyBg({ type, value });
-        showToast('Arka fon kaydedildi! ✓');
-    }
-
-    /* ══════════════════════════════════════════════════════════════
-       FOTOĞRAF SEÇİCİ
-    ══════════════════════════════════════════════════════════════ */
-
-    let _pickerTarget = null;
-
-    async function openPhotoPicker(target) {
-        _pickerTarget = target;
-        const grid = document.getElementById('picker-grid');
-        grid.innerHTML = '<div style="text-align:center;padding:30px"><div class="spinner"></div></div>';
-        document.getElementById('photo-picker-modal').classList.add('open');
-
-        const photos = await loadPhotos();
-        if (!photos.length) {
-            grid.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;font-style:italic">Henüz albümde fotoğraf yok.</p>';
-            return;
-        }
-
-        grid.innerHTML = photos.map(p => {
-            const safeUrl = (p.url || '').replace(/'/g, "\\'");
-            const safeAlt = (p.caption || '').replace(/</g, '&lt;');
-            return `<div class="photo-picker-item" onclick="selectPickerPhoto('${safeUrl}')">
-                <img src="${p.url}" alt="${safeAlt}" loading="lazy"
-                     onerror="this.parentElement.style.display='none'">
-            </div>`;
-        }).join('');
-    }
-
-    function selectPickerPhoto(url) {
-        if (_pickerTarget === 'p1') {
-            document.getElementById('s-p1-img').value = url;
-            previewPlayerImg('p1-preview-wrap', url, 'A');
-        } else {
-            document.getElementById('s-p2-img').value = url;
-            previewPlayerImg('p2-preview-wrap', url, 'Z');
-        }
-        closePhotoPicker();
-    }
-
-    function closePhotoPicker() {
-        document.getElementById('photo-picker-modal').classList.remove('open');
-    }
-
-    /* ── Toast ──────────────────────────────────────────────────── */
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
+/* close modals on overlay click */
+document.getElementById('edit-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeEdit(); });
+document.getElementById('picker-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closePicker(); });
 </script>
 </body>
 </html>

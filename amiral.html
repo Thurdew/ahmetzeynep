@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
     <title>Amiral Battı ⚓</title>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -294,8 +295,13 @@
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="firebase.js"></script>
+<script src="supabase.js"></script>
 <script>
+    if (typeof sb === 'undefined' || !sb) {
+        document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;padding:40px 20px;font-size:1rem">Baglanti hatasi: Supabase yuklenemedi.<br><br>Kontrol et: internet baglantisi var mi?<br>Sayfayi yenile: Ctrl+Shift+R</p>';
+        throw new Error('Supabase client yuklenemedi — sb undefined');
+    }
+    console.log("amiral.html: sb mevcut, handleCreate tanimli:", typeof handleCreate);
     startParticles('particles');
 
     /* ════════════════════════════════════════════════════════
@@ -305,9 +311,9 @@
     const GRID_SIZE  = 8;
     const COL_LABELS = ['A','B','C','D','E','F','G','H'];
     const SHIP_DEFS  = [
-        { id:'carrier',    name:'Uçak Gemisi', size:4 },
-        { id:'battleship', name:'Zırhlı',      size:3 },
-        { id:'submarine',  name:'Denizaltı',   size:3 },
+        { id:'carrier',    name:'Ucak Gemisi', size:4 },
+        { id:'battleship', name:'Zirhli',       size:3 },
+        { id:'submarine',  name:'Denizalti',   size:3 },
         { id:'dest1',      name:'Destroyer',   size:2 },
         { id:'dest2',      name:'Destroyer',   size:2 }
     ];
@@ -316,11 +322,11 @@
     /* ════════════════════════════════════════════════════════
        STATE
     ════════════════════════════════════════════════════════ */
-    const pid     = getPlayerId();
+    let pid       = null;
     let roomCode  = null;
-    let myNum     = null;   // 1 veya 2
-    let cfg       = {};     // loadSettings()
-    let unsub     = null;   // listener cleanup fn
+    let myNum     = null;
+    let cfg       = {};
+    let unsub     = null;
     let gameOver  = false;
 
     /* Setup state */
@@ -335,6 +341,7 @@
        INIT
     ════════════════════════════════════════════════════════ */
     async function init() {
+        pid = getPlayerId();
         cfg = await loadSettings();
         const urlRoom = new URLSearchParams(location.search).get('room');
         if (urlRoom) autoJoin(urlRoom.toUpperCase());
@@ -366,7 +373,7 @@
     async function handleJoin() {
         clearErr();
         const code = document.getElementById('join-input').value.trim().toUpperCase();
-        if (code.length !== 6) { showErr('Oda kodu 6 karakter olmalı.'); return; }
+        if (code.length !== 6) { showErr('Oda kodu 6 karakter olmali.'); return; }
         try {
             await joinRoom(GAME_TYPE, code);
             roomCode = code;
@@ -402,7 +409,7 @@
     }
 
     function onData(data) {
-        if (!data) { showErr('Oda bulunamadı.'); showScreen('room'); return; }
+        if (!data) { showErr('Oda bulunamadi.'); showScreen('room'); return; }
 
         /* Kendi oyuncu numarasını belirle */
         if (!myNum) {
@@ -480,13 +487,13 @@
         document.querySelectorAll('.ship-item').forEach(function(el) { el.classList.remove('selected'); });
         var el = document.getElementById('si-' + id);
         if (el) el.classList.add('selected');
-        document.getElementById('setup-status').textContent = "Grid'e tıkla, gemiyi yerleştir";
+        document.getElementById('setup-status').textContent = 'Gride tikla, gemiyi yerlestir';
     }
 
     function rotateShip() {
         horizontal = !horizontal;
         document.getElementById('setup-status').textContent =
-            horizontal ? 'Yon: Yatay →' : 'Yon: Dikey ↓';
+            horizontal ? 'Yon: Yatay ->' : 'Yon: Dikey v';
     }
 
     function undoShip() {

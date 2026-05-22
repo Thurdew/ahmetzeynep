@@ -1,29 +1,33 @@
+console.log("supabase.js yuklendi");
+
 /* ═══════════════════════════════════════════════════════════════════
    ⚙️  SUPABASE YAPILANDIRMASI
-   ─────────────────────────────────────────────────────────────────
-   Supabase Dashboard → Project Settings → API
-   "Project URL" ve "anon public" key'i buraya yapıştır.
 ═══════════════════════════════════════════════════════════════════ */
 const SUPABASE_URL      = "https://alomxtszjdwsaoxluhzr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsb214dHN6amR3c2FveGx1aHpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNzIwNDMsImV4cCI6MjA5NDk0ODA0M30.Oy13wTfmpT8e7AHF3raW_akQkCUdJDu1gzXK09ZT8Nk";
 
-/* ── Admin şifresi ────────────────────────────────────────────── */
 const ADMIN_PASSWORD = "ahmetzeynep2026";
 
-/* ── Supabase client ─────────────────────────────────────────── */
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: {
-        headers: {
-            'apikey':        SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type':  'application/json',
-            'Accept':        'application/json'
+let sb;
+try {
+    if (typeof supabase === 'undefined') throw new Error('Supabase CDN yuklenemedi');
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: {
+            headers: {
+                'apikey':        SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type':  'application/json',
+                'Accept':        'application/json'
+            }
         }
-    }
-});
+    });
+    console.log("Supabase client olusturuldu");
+} catch (e) {
+    console.error("Supabase client HATASI:", e.message);
+}
 
 /* ═══════════════════════════════════════════════════════════════
-   FOTOĞRAF FONKSİYONLARI
+   FOTOĞRAF
 ═══════════════════════════════════════════════════════════════ */
 
 async function loadPhotos() {
@@ -62,7 +66,7 @@ async function updatePhoto(id, data) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SORU FONKSİYONLARI
+   SORULAR
 ═══════════════════════════════════════════════════════════════ */
 
 async function loadQuestions() {
@@ -181,11 +185,11 @@ async function joinRoom(gameType, roomCode) {
     const key = `${gameType}_${roomCode.toUpperCase()}`;
     const { data, error } = await sb.from('game_rooms')
         .select('data').eq('id', key).single();
-    if (error || !data) throw new Error('Oda bulunamadı. Kodu kontrol et.');
+    if (error || !data) throw new Error('Oda bulunamadi. Kodu kontrol et.');
     const roomData = data.data;
-    if (roomData.status !== 'waiting') throw new Error('Bu oda dolu veya oyun başladı.');
+    if (roomData.status !== 'waiting') throw new Error('Bu oda dolu veya oyun basladi.');
     const playerId = getPlayerId();
-    if (roomData.player1 === playerId) throw new Error('Kendi odana katılamazsın.');
+    if (roomData.player1 === playerId) throw new Error('Kendi odana katilamazsin.');
     const newData = { ...roomData, player2: playerId, status: 'playing' };
     const { error: upErr } = await sb.from('game_rooms')
         .update({ data: newData, updated_at: new Date().toISOString() })
@@ -205,11 +209,9 @@ async function getRoomData(gameType, roomCode) {
 function listenRoom(gameType, roomCode, callback) {
     const key = `${gameType}_${roomCode}`;
 
-    // İlk veriyi hemen getir
     sb.from('game_rooms').select('data').eq('id', key).single()
         .then(({ data }) => { if (data) callback(data.data); });
 
-    // Realtime dinle
     const channel = sb.channel(`room_${key}`)
         .on('postgres_changes', {
             event:  '*',
@@ -227,7 +229,7 @@ function listenRoom(gameType, roomCode, callback) {
 async function updateRoom(gameType, roomCode, partialData) {
     const key     = `${gameType}_${roomCode}`;
     const current = await getRoomData(gameType, roomCode);
-    if (!current) throw new Error('Oda verisi alınamadı.');
+    if (!current) throw new Error('Oda verisi alinamadi.');
     const newData = { ...current, ...partialData };
     const { error } = await sb.from('game_rooms')
         .update({ data: newData, updated_at: new Date().toISOString() })
@@ -292,15 +294,13 @@ function startParticles(containerId = 'particles') {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GİRİŞ ŞİFRESİ  — requireSitePassword()
-   Supabase'de settings.site_password doluysa şifre sorulur.
-   sessionStorage ile session boyunca tek seferlik.
+   GİRİŞ ŞİFRESİ — requireSitePassword()
 ═══════════════════════════════════════════════════════════════ */
 async function requireSitePassword() {
     if (sessionStorage.getItem('az_unlocked') === '1') return false;
 
     const settings = await loadSettings();
-    const pwd = settings.site_password || '';
+    const pwd = settings.site_password || '11062024';
     if (!pwd) { sessionStorage.setItem('az_unlocked', '1'); return false; }
 
     return new Promise(resolve => {
@@ -354,7 +354,7 @@ async function requireSitePassword() {
                 overlay.style.opacity = '0';
                 setTimeout(() => { overlay.remove(); resolve(true); }, 700);
             } else {
-                err.textContent = 'Yanlış şifre, tekrar dene 💕';
+                err.textContent = 'Yanlis sifre, tekrar dene 💕';
                 let t = 0;
                 const shake = setInterval(() => {
                     inp.style.transform = t++ % 2 ? 'translateX(9px)' : 'translateX(-9px)';
@@ -369,9 +369,7 @@ async function requireSitePassword() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ARKA FON  — applySiteBackground()
-   Supabase'deki bg_type / bg_value ayarlarını uygular.
-   localStorage cache ile anlık yüklenir.
+   ARKA FON — applySiteBackground()
 ═══════════════════════════════════════════════════════════════ */
 async function applySiteBackground() {
     try {
