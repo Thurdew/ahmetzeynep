@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4'lü Sıra 🔴</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-y: auto; }
+
+        .c4-wrap {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 12px 16px 60px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Oyuncu göstergeleri */
+        .c4-players {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+        }
+
+        .c4-player {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            padding: 10px 8px;
+            border-radius: var(--radius-sm);
+            border: 2px solid transparent;
+            transition: border-color .3s, background .3s;
+        }
+
+        .c4-player.active {
+            border-color: var(--lilac);
+            background: rgba(200,162,200,.1);
+        }
+
+        .c4-avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--pink);
+        }
+
+        .c4-avatar-placeholder {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem; color: #fff;
+            border: 3px solid var(--pink);
+        }
+
+        .c4-player-name {
+            font-family: 'Playfair Display', serif;
+            font-size: .84rem;
+            color: var(--deep);
+        }
+
+        .c4-turn-badge {
+            font-size: .64rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--lilac);
+            font-weight: 700;
+        }
+
+        /* Durum çubuğu */
+        .c4-status {
+            background: rgba(255,255,255,.9);
+            border-radius: var(--radius-card);
+            padding: 12px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(200,162,200,.2);
+            font-family: 'Playfair Display', serif;
+            font-size: 1rem;
+            color: var(--deep);
+        }
+
+        /* Tahta */
+        .c4-board-wrap {
+            background: rgba(200,162,200,.25);
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: var(--card-shadow);
+        }
+
+        /* Sütun okları (tıklanabilir) */
+        .c4-col-arrows {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 6px;
+        }
+
+        .c4-col-btn {
+            height: 28px;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background .2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .c4-col-btn:hover:not(:disabled) { background: rgba(200,162,200,.35); }
+        .c4-col-btn:disabled { cursor: default; opacity: .3; }
+
+        /* Grid */
+        .c4-board {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .c4-cell {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: rgba(255,255,255,.55);
+            border: 2px solid rgba(200,162,200,.2);
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+        }
+
+        .c4-cell img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            animation: c4-drop .3s cubic-bezier(.2,.8,.3,1);
+        }
+
+        .c4-cell .c4-fallback {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: #fff;
+            font-size: clamp(.7rem, 2.5vw, 1rem);
+            animation: c4-drop .3s cubic-bezier(.2,.8,.3,1);
+        }
+
+        .c4-cell.win-cell {
+            box-shadow: 0 0 0 3px var(--gold);
+            animation: win-pulse .7s ease infinite alternate;
+        }
+
+        @keyframes c4-drop {
+            from { transform: translateY(-60px); opacity: 0; }
+            to   { transform: translateY(0);     opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<header class="page-header">
+    <a href="oyunlar.html" class="back-btn">← Oyunlar</a>
+    <h1>4'lü Sıra 🔴</h1>
+</header>
+
+<!-- Oda ekranı -->
+<div id="room-screen" class="c4-wrap">
+    <div style="text-align:center;font-family:'Playfair Display',serif;color:var(--deep);font-size:1.5rem;margin:8px 0">Oyuna Başla</div>
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:26px 22px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:14px">
+        <button class="btn btn-primary btn-block" onclick="handleCreate()">✨ Yeni Oyun Başlat</button>
+        <div class="room-divider">veya</div>
+        <input class="room-input" id="join-input" placeholder="ODA KODU" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-secondary btn-block" onclick="handleJoin()">Odaya Katıl →</button>
+        <p class="room-error" id="room-error"></p>
+    </div>
+</div>
+
+<!-- Bekleme ekranı -->
+<div id="wait-screen" class="c4-wrap" style="display:none">
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:32px 22px;box-shadow:var(--card-shadow);text-align:center;display:flex;flex-direction:column;gap:16px;align-items:center">
+        <p style="font-family:'Playfair Display',serif;color:var(--muted);font-size:.9rem">Oda kodunu karşı oyuncuya paylaş</p>
+        <div class="room-code-display" id="room-code-display"></div>
+        <div class="waiting-indicator">
+            <div class="waiting-dots"><span></span><span></span><span></span></div>
+            Karşı oyuncu bekleniyor...
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="cancelRoom()">İptal</button>
+    </div>
+</div>
+
+<!-- Oyun ekranı -->
+<div id="game-screen" class="c4-wrap" style="display:none">
+    <div class="c4-players" id="c4-players">
+        <div class="c4-player" id="p1-indicator">
+            <div id="p1-avatar"></div>
+            <span class="c4-player-name" id="p1-name">Oyuncu 1</span>
+            <span class="c4-turn-badge" id="p1-badge" style="visibility:hidden">Sıra sende ▼</span>
+        </div>
+        <div class="c4-player" id="p2-indicator">
+            <div id="p2-avatar"></div>
+            <span class="c4-player-name" id="p2-name">Oyuncu 2</span>
+            <span class="c4-turn-badge" id="p2-badge" style="visibility:hidden">Sıra sende ▼</span>
+        </div>
+    </div>
+    <div class="c4-status" id="c4-status">Oyun başlıyor...</div>
+    <div class="c4-board-wrap">
+        <div class="c4-col-arrows" id="c4-arrows"></div>
+        <div class="c4-board" id="c4-board"></div>
+    </div>
+</div>
+
+<!-- Sonuç modalı -->
+<div class="modal-overlay" id="result-modal">
+    <div class="modal-box" style="text-align:center;align-items:center;gap:14px">
+        <div class="result-emoji" id="res-emoji">🎉</div>
+        <h2 class="result-title" id="res-title">Kazandın!</h2>
+        <p class="result-sub" id="res-sub"></p>
+        <button class="btn btn-primary btn-block" onclick="rematch()">Tekrar Oyna 🔄</button>
+        <a href="oyunlar.html" class="btn btn-secondary btn-block">Oyunlar Menüsü</a>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="firebase.js"></script>
+<script>
+    startParticles('particles');
+
+    const ROWS = 6, COLS = 7;
+    const GAME_TYPE = 'connect4';
+    const pid = getPlayerId();
+
+    let roomCode    = null;
+    let myNum       = null;
+    let settings    = {};
+    let unsubscribe = null;
+    let gameOver    = false;
+
+    async function init() {
+        settings = await loadSettings();
+        const param = new URLSearchParams(location.search).get('room');
+        if (param) joinByUrl(param.toUpperCase());
+    }
+
+    async function handleCreate() {
+        clearError();
+        const code = await createRoom(GAME_TYPE, { board: Array(ROWS * COLS).fill(0) });
+        roomCode = code; myNum = 1;
+        history.replaceState({}, '', `connect4.html?room=${code}`);
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        startListening(code);
+    }
+
+    async function handleJoin() {
+        clearError();
+        const code = document.getElementById('join-input').value.trim().toUpperCase();
+        if (code.length !== 6) { showError('Oda kodu 6 karakter olmalı.'); return; }
+        try {
+            await joinRoom(GAME_TYPE, code);
+            roomCode = code; myNum = 2;
+            history.replaceState({}, '', `connect4.html?room=${code}`);
+            startListening(code);
+        } catch (e) { showError(e.message); }
+    }
+
+    function joinByUrl(code) {
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        roomCode = code;
+        startListening(code);
+    }
+
+    function startListening(code) {
+        if (unsubscribe) unsubscribe();
+        unsubscribe = listenRoom(GAME_TYPE, code, onUpdate);
+    }
+
+    function onUpdate(data) {
+        if (!data) { showError('Oda bulunamadı.'); showScreen('room'); return; }
+        if (!myNum) {
+            if (data.player1 === pid)      myNum = 1;
+            else if (data.player2 === pid) myNum = 2;
+            else if (!data.player2) {
+                joinRoom(GAME_TYPE, roomCode).then(() => myNum = 2).catch(e => showError(e.message));
+                return;
+            } else { showError('Bu oda dolu.'); return; }
+        }
+        if (data.status === 'waiting') { showScreen('wait'); return; }
+        showScreen('game');
+        renderBoard(data);
+        updateStatus(data);
+        if (data.status === 'finished' && !gameOver) { gameOver = true; setTimeout(() => showResult(data), 500); }
+    }
+
+    /* ── Tahta oluştur ──────────────────────────────────────────── */
+    function buildBoard() {
+        // Oklar (sütun başlarına)
+        const arrows = document.getElementById('c4-arrows');
+        arrows.innerHTML = '';
+        for (let c = 0; c < COLS; c++) {
+            const btn = document.createElement('button');
+            btn.className = 'c4-col-btn';
+            btn.textContent = '▼';
+            btn.dataset.col = c;
+            btn.addEventListener('click', () => handleMove(c));
+            arrows.appendChild(btn);
+        }
+
+        // Hücreler
+        const board = document.getElementById('c4-board');
+        board.innerHTML = '';
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'c4-cell';
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+                board.appendChild(cell);
+            }
+        }
+
+        buildAvatars();
+    }
+
+    function buildAvatars() {
+        renderAvatar('p1-avatar', settings.c4_player1_img, 'A', 'linear-gradient(135deg,#ffb6c1,#c8a2c8)');
+        renderAvatar('p2-avatar', settings.c4_player2_img, 'Z', 'linear-gradient(135deg,#c8a2c8,#ffd49e)');
+        document.getElementById('p1-name').textContent = settings.c4_player1_name || 'Ahmet';
+        document.getElementById('p2-name').textContent = settings.c4_player2_name || 'Zeynep';
+    }
+
+    function renderAvatar(id, url, letter, grad) {
+        const el = document.getElementById(id);
+        el.innerHTML = url
+            ? `<img class="c4-avatar" src="${url}" alt="" onerror="this.parentElement.innerHTML='<div class=c4-avatar-placeholder style=background:${grad}>${letter}</div>'">`
+            : `<div class="c4-avatar-placeholder" style="background:${grad}">${letter}</div>`;
+    }
+
+    /* ── Board render ───────────────────────────────────────────── */
+    function renderBoard(data) {
+        const board = data.board || Array(ROWS * COLS).fill(0);
+        const cells = document.querySelectorAll('.c4-cell');
+        const isMyTurn = data.currentPlayer === myNum && data.status === 'playing';
+
+        cells.forEach(cell => {
+            const r   = +cell.dataset.r, c = +cell.dataset.c;
+            const idx = r * COLS + c;
+            const val = board[idx];
+
+            if (val && !cell.dataset.rendered) {
+                cell.dataset.rendered = val;
+                const url    = val === 1 ? settings.c4_player1_img : settings.c4_player2_img;
+                const letter = val === 1 ? 'A' : 'Z';
+                const grad   = val === 1 ? 'linear-gradient(135deg,#ffb6c1,#c8a2c8)' : 'linear-gradient(135deg,#c8a2c8,#ffd49e)';
+                cell.innerHTML = url
+                    ? `<img src="${url}" alt="" onerror="this.outerHTML='<div class=c4-fallback style=background:${grad}>${letter}</div>'">`
+                    : `<div class="c4-fallback" style="background:${grad}">${letter}</div>`;
+            } else if (!val) {
+                cell.innerHTML = '';
+                delete cell.dataset.rendered;
+                cell.classList.remove('win-cell');
+            }
+        });
+
+        // Sütun butonlarını güncelle
+        document.querySelectorAll('.c4-col-btn').forEach(btn => {
+            const col     = +btn.dataset.col;
+            const colFull = board[(0) * COLS + col] !== 0;
+            btn.disabled  = !isMyTurn || colFull || data.status !== 'playing';
+        });
+
+        // Kazanma hücrelerini vurgula
+        if (data.winner && data.winner !== 'draw' && data.winCells) {
+            data.winCells.forEach(idx => {
+                const r = Math.floor(idx / COLS), co = idx % COLS;
+                const cell = document.querySelector(`.c4-cell[data-r="${r}"][data-c="${co}"]`);
+                if (cell) cell.classList.add('win-cell');
+            });
+        }
+    }
+
+    function updateStatus(data) {
+        const isMyTurn = data.currentPlayer === myNum && data.status === 'playing';
+        document.getElementById('p1-indicator').classList.toggle('active', data.currentPlayer === 1 && data.status === 'playing');
+        document.getElementById('p2-indicator').classList.toggle('active', data.currentPlayer === 2 && data.status === 'playing');
+        document.getElementById('p1-badge').style.visibility = (data.currentPlayer === 1 && data.status === 'playing') ? 'visible' : 'hidden';
+        document.getElementById('p2-badge').style.visibility = (data.currentPlayer === 2 && data.status === 'playing') ? 'visible' : 'hidden';
+        if (data.status === 'playing') {
+            document.getElementById('c4-status').textContent = isMyTurn ? 'Senin sıran! ▼ Bir sütuna tıkla' : 'Rakibin düşünüyor...';
+        }
+    }
+
+    /* ── Hamle ──────────────────────────────────────────────────── */
+    async function handleMove(col) {
+        const data = await getRoomData(GAME_TYPE, roomCode);
+        if (!data || data.status !== 'playing' || data.currentPlayer !== myNum) return;
+
+        const board = [...(data.board || Array(ROWS * COLS).fill(0))];
+
+        // En alttaki boş satırı bul
+        let row = -1;
+        for (let r = ROWS - 1; r >= 0; r--) {
+            if (board[r * COLS + col] === 0) { row = r; break; }
+        }
+        if (row === -1) return; // Dolu sütun
+
+        board[row * COLS + col] = myNum;
+
+        const winCells = getWinCells(board, myNum);
+        const winner   = winCells ? myNum : (board.every(c => c !== 0) ? 'draw' : null);
+        const status   = winner ? 'finished' : 'playing';
+        const next     = myNum === 1 ? 2 : 1;
+
+        await updateRoom(GAME_TYPE, roomCode, {
+            board,
+            currentPlayer: winner ? myNum : next,
+            winner,
+            winCells: winCells || null,
+            status
+        });
+    }
+
+    /* ── Kazanma tespiti ────────────────────────────────────────── */
+    function getWinCells(board, player) {
+        const idx = (r, c) => r * COLS + c;
+
+        const check = (cells) => cells.every(i => board[i] === player) ? cells : null;
+
+        for (let r = 0; r < ROWS; r++)
+            for (let c = 0; c <= COLS - 4; c++) {
+                const res = check([0,1,2,3].map(i => idx(r, c+i)));
+                if (res) return res;
+            }
+
+        for (let r = 0; r <= ROWS - 4; r++)
+            for (let c = 0; c < COLS; c++) {
+                const res = check([0,1,2,3].map(i => idx(r+i, c)));
+                if (res) return res;
+            }
+
+        for (let r = 0; r <= ROWS - 4; r++)
+            for (let c = 0; c <= COLS - 4; c++) {
+                const res = check([0,1,2,3].map(i => idx(r+i, c+i)));
+                if (res) return res;
+            }
+
+        for (let r = 3; r < ROWS; r++)
+            for (let c = 0; c <= COLS - 4; c++) {
+                const res = check([0,1,2,3].map(i => idx(r-i, c+i)));
+                if (res) return res;
+            }
+
+        return null;
+    }
+
+    /* ── Sonuç ──────────────────────────────────────────────────── */
+    function showResult(data) {
+        const p1Name = settings.c4_player1_name || 'Ahmet';
+        const p2Name = settings.c4_player2_name || 'Zeynep';
+        if (data.winner === 'draw') {
+            document.getElementById('res-emoji').textContent = '🤝';
+            document.getElementById('res-title').textContent = 'Berabere!';
+            document.getElementById('res-sub').textContent   = 'İkisi de iyi oynadı 💕';
+        } else {
+            const isMe = data.winner === myNum;
+            document.getElementById('res-emoji').textContent = isMe ? '🎉' : '🥺';
+            document.getElementById('res-title').textContent = isMe ? 'Kazandın!' : 'Kaybettin!';
+            document.getElementById('res-sub').textContent   = `${data.winner === 1 ? p1Name : p2Name} kazandı 💕`;
+            if (isMe) fireConfetti();
+        }
+        document.getElementById('result-modal').classList.add('open');
+    }
+
+    async function rematch() {
+        document.getElementById('result-modal').classList.remove('open');
+        gameOver = false;
+        document.querySelectorAll('.c4-cell').forEach(c => { c.innerHTML=''; delete c.dataset.rendered; c.classList.remove('win-cell'); });
+        await updateRoom(GAME_TYPE, roomCode, { board: Array(ROWS*COLS).fill(0), currentPlayer:1, winner:null, winCells:null, status:'playing' });
+    }
+
+    async function cancelRoom() {
+        if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+        if (roomCode) await deleteRoom(GAME_TYPE, roomCode);
+        roomCode = null; myNum = null;
+        history.replaceState({}, '', 'connect4.html');
+        showScreen('room');
+    }
+
+    function showScreen(name) {
+        document.getElementById('room-screen').style.display = name === 'room' ? '' : 'none';
+        document.getElementById('wait-screen').style.display = name === 'wait' ? '' : 'none';
+        document.getElementById('game-screen').style.display = name === 'game' ? '' : 'none';
+        if (name === 'game' && !document.getElementById('c4-board').children.length) buildBoard();
+    }
+
+    function showError(msg) { document.getElementById('room-error').textContent = msg; showToast(msg); }
+    function clearError()   { document.getElementById('room-error').textContent = ''; }
+    function showToast(msg) { const t = document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+
+    init();
+</script>
+</body>
+</html>

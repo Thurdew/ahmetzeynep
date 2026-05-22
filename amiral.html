@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amiral Battı ⚓</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-y: auto; }
+
+        .am-wrap {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 12px 16px 60px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Grid etiketleri + hücreler */
+        .am-grid-container { display: flex; flex-direction: column; gap: 3px; }
+
+        .am-grid-row {
+            display: grid;
+            grid-template-columns: 22px repeat(8, 1fr);
+            gap: 3px;
+        }
+
+        .am-grid-label {
+            display: flex; align-items: center; justify-content: center;
+            font-size: .62rem; color: var(--muted); font-weight: 700;
+        }
+
+        .am-col-labels {
+            display: grid;
+            grid-template-columns: 22px repeat(8, 1fr);
+            gap: 3px;
+            margin-bottom: 2px;
+        }
+
+        .am-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            background: rgba(174,214,241,.25);
+            border: 1.5px solid rgba(174,214,241,.4);
+            cursor: pointer;
+            transition: background .18s, transform .12s;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .8rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .am-cell:hover:not(.fired):not(.ship-placed) { background: rgba(174,214,241,.55); transform: scale(1.08); }
+        .am-cell.ship-placed { background: rgba(200,162,200,.35); border-color: var(--lilac); cursor: default; }
+        .am-cell.ship-preview { background: rgba(200,162,200,.2); border-color: rgba(200,162,200,.6); }
+        .am-cell.ship-preview.invalid { background: rgba(255,100,100,.15); border-color: rgba(255,100,100,.5); }
+        .am-cell.hit   { background: rgba(255,80,80,.3); border-color: #ff6b6b; }
+        .am-cell.miss  { background: rgba(255,255,255,.4); border-color: rgba(200,200,200,.5); }
+        .am-cell.sunk  { background: rgba(200,50,50,.4); border-color: #c00; }
+        .am-cell.fired { cursor: default; }
+
+        .am-cell img {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; border-radius: 4px;
+            opacity: .85;
+        }
+
+        /* Gemi listesi */
+        .ship-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .ship-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 2px solid #ede4f5;
+            background: rgba(255,255,255,.85);
+            cursor: pointer;
+            transition: all .2s;
+            font-family: 'Playfair Display', serif;
+            font-size: .82rem;
+            color: var(--deep);
+        }
+
+        .ship-item.selected {
+            border-color: var(--lilac);
+            background: rgba(200,162,200,.15);
+        }
+
+        .ship-item.placed {
+            opacity: .45;
+            pointer-events: none;
+            text-decoration: line-through;
+        }
+
+        .ship-squares {
+            display: flex;
+            gap: 2px;
+        }
+
+        .ship-sq {
+            width: 10px; height: 10px;
+            border-radius: 2px;
+            background: var(--lilac);
+        }
+
+        /* Durum çubuğu */
+        .am-status {
+            background: rgba(255,255,255,.9);
+            border-radius: var(--radius-card);
+            padding: 12px 18px;
+            text-align: center;
+            font-family: 'Playfair Display', serif;
+            font-size: .98rem;
+            color: var(--deep);
+            box-shadow: 0 4px 20px rgba(200,162,200,.2);
+        }
+
+        /* Grid başlıkları */
+        .am-board-title {
+            font-family: 'Playfair Display', serif;
+            font-size: .85rem;
+            color: var(--deep);
+            text-align: center;
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+        }
+
+        .am-board-section {
+            background: rgba(255,255,255,.88);
+            border-radius: var(--radius-card);
+            padding: 14px;
+            box-shadow: 0 4px 18px rgba(200,162,200,.15);
+        }
+
+        /* Oyuncu göstergeleri (üst şerit) */
+        .am-players {
+            display: flex; justify-content: space-around; gap: 10px;
+        }
+
+        .am-player {
+            display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1;
+            padding: 8px; border-radius: var(--radius-sm);
+            border: 2px solid transparent; transition: all .3s;
+        }
+
+        .am-player.active { border-color: var(--lilac); background: rgba(200,162,200,.1); }
+
+        .am-avatar {
+            width: 42px; height: 42px; border-radius: 50%;
+            object-fit: cover; border: 2.5px solid var(--pink);
+        }
+
+        .am-avatar-ph {
+            width: 42px; height: 42px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #fff;
+            border: 2.5px solid var(--pink);
+        }
+
+        .am-player-name { font-family: 'Playfair Display', serif; font-size: .8rem; color: var(--deep); }
+        .am-turn-badge  { font-size: .62rem; letter-spacing: 2px; text-transform: uppercase; color: var(--lilac); font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<header class="page-header">
+    <a href="oyunlar.html" class="back-btn">← Oyunlar</a>
+    <h1>Amiral Battı ⚓</h1>
+</header>
+
+<!-- Oda ekranı -->
+<div id="room-screen" class="am-wrap">
+    <div style="text-align:center;font-family:'Playfair Display',serif;color:var(--deep);font-size:1.5rem;margin:8px 0">Oyuna Başla</div>
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:26px 22px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:14px">
+        <button class="btn btn-primary btn-block" onclick="handleCreate()">✨ Yeni Oyun Başlat</button>
+        <div class="room-divider">veya</div>
+        <input class="room-input" id="join-input" placeholder="ODA KODU" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-secondary btn-block" onclick="handleJoin()">Odaya Katıl →</button>
+        <p class="room-error" id="room-error"></p>
+    </div>
+</div>
+
+<!-- Bekleme ekranı -->
+<div id="wait-screen" class="am-wrap" style="display:none">
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:32px 22px;box-shadow:var(--card-shadow);text-align:center;display:flex;flex-direction:column;gap:16px;align-items:center">
+        <p style="font-family:'Playfair Display',serif;color:var(--muted);font-size:.9rem">Oda kodunu karşı oyuncuya paylaş</p>
+        <div class="room-code-display" id="room-code-display"></div>
+        <div class="waiting-indicator">
+            <div class="waiting-dots"><span></span><span></span><span></span></div>
+            Karşı oyuncu bekleniyor...
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="cancelRoom()">İptal</button>
+    </div>
+</div>
+
+<!-- Gemi yerleştirme ekranı -->
+<div id="setup-screen" class="am-wrap" style="display:none">
+    <div class="am-status" id="setup-status">Bir gemi seç, sonra grid'e yerleştir</div>
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:16px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:10px;align-items:center">
+        <div class="ship-list" id="ship-list"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <button class="btn btn-secondary btn-sm" onclick="rotateShip()">↻ Döndür</button>
+            <button class="btn btn-secondary btn-sm" onclick="undoLastShip()">↺ Geri Al</button>
+        </div>
+        <div class="am-board-title">Senin Gridi</div>
+        <div id="setup-grid"></div>
+        <button class="btn btn-primary btn-block" id="ready-btn" onclick="sendReady()" disabled>
+            Hazır! ✓
+        </button>
+    </div>
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:12px 16px;box-shadow:var(--card-shadow);text-align:center">
+        <div class="waiting-indicator" id="wait-opponent-setup" style="display:none">
+            <div class="waiting-dots"><span></span><span></span><span></span></div>
+            Rakip gemilerini yerleştiriyor...
+        </div>
+    </div>
+</div>
+
+<!-- Savaş ekranı -->
+<div id="battle-screen" class="am-wrap" style="display:none">
+    <div class="am-players" id="am-players">
+        <div class="am-player" id="p1-indicator">
+            <div id="p1-avatar"></div>
+            <span class="am-player-name" id="p1-name">Oyuncu 1</span>
+            <span class="am-turn-badge" id="p1-badge" style="visibility:hidden">Sıra sende</span>
+        </div>
+        <div class="am-player" id="p2-indicator">
+            <div id="p2-avatar"></div>
+            <span class="am-player-name" id="p2-name">Oyuncu 2</span>
+            <span class="am-turn-badge" id="p2-badge" style="visibility:hidden">Sıra sende</span>
+        </div>
+    </div>
+    <div class="am-status" id="battle-status">Oyun başlıyor...</div>
+
+    <div class="am-board-section">
+        <div class="am-board-title">Rakip Gridi — Tıkla ve Vur!</div>
+        <div id="enemy-grid"></div>
+    </div>
+
+    <div class="am-board-section">
+        <div class="am-board-title">Senin Gridi</div>
+        <div id="my-grid"></div>
+    </div>
+</div>
+
+<!-- Sonuç modalı -->
+<div class="modal-overlay" id="result-modal">
+    <div class="modal-box" style="text-align:center;align-items:center;gap:14px">
+        <div class="result-emoji" id="res-emoji">🎉</div>
+        <h2 class="result-title" id="res-title">Kazandın!</h2>
+        <p class="result-sub" id="res-sub"></p>
+        <button class="btn btn-primary btn-block" onclick="location.reload()">Yeni Oyun 🔄</button>
+        <a href="oyunlar.html" class="btn btn-secondary btn-block">Oyunlar Menüsü</a>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="firebase.js"></script>
+<script>
+    startParticles('particles');
+
+    /* ── Sabitler ──────────────────────────────────────────────── */
+    const GRID = 8; // 8×8
+    const GAME_TYPE = 'amiral';
+    const SHIP_DEFS = [
+        { id:'carrier',    name:'Uçak Gemisi', size:4 },
+        { id:'battleship', name:'Zırhlı',      size:3 },
+        { id:'submarine',  name:'Denizaltı',   size:3 },
+        { id:'destroyer1', name:'Destroyer',   size:2 },
+        { id:'destroyer2', name:'Destroyer',   size:2 }
+    ];
+    const TOTAL_SHIP_CELLS = SHIP_DEFS.reduce((s, sh) => s + sh.size, 0); // 14
+
+    const COL_LABELS = ['A','B','C','D','E','F','G','H'];
+
+    /* ── State ─────────────────────────────────────────────────── */
+    const pid = getPlayerId();
+    let roomCode    = null;
+    let myNum       = null;
+    let settings    = {};
+    let unsubscribe = null;
+    let gameOver    = false;
+
+    // Setup state
+    let myShips         = new Set(); // "r,c" strings
+    let placedShipIds   = new Set();
+    let selectedShipId  = null;
+    let isHorizontal    = true;
+    let lastPlacedShip  = null; // { id, cells }
+
+    async function init() {
+        settings = await loadSettings();
+        const param = new URLSearchParams(location.search).get('room');
+        if (param) joinByUrl(param.toUpperCase());
+    }
+
+    /* ── Oda yönetimi ───────────────────────────────────────────── */
+    async function handleCreate() {
+        clearError();
+        const code = await createRoom(GAME_TYPE, {
+            status: 'waiting', p1Ships:null, p2Ships:null, p1Ready:false, p2Ready:false,
+            p1Shots:{}, p2Shots:{}, p1Sunk:0, p2Sunk:0
+        });
+        roomCode = code; myNum = 1;
+        history.replaceState({}, '', `amiral.html?room=${code}`);
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        startListening(code);
+    }
+
+    async function handleJoin() {
+        clearError();
+        const code = document.getElementById('join-input').value.trim().toUpperCase();
+        if (code.length !== 6) { showError('Oda kodu 6 karakter olmalı.'); return; }
+        try {
+            await joinRoom(GAME_TYPE, code);
+            roomCode = code; myNum = 2;
+            history.replaceState({}, '', `amiral.html?room=${code}`);
+            startListening(code);
+        } catch (e) { showError(e.message); }
+    }
+
+    function joinByUrl(code) {
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        roomCode = code;
+        startListening(code);
+    }
+
+    function startListening(code) {
+        if (unsubscribe) unsubscribe();
+        unsubscribe = listenRoom(GAME_TYPE, code, onUpdate);
+    }
+
+    /* ── RTDB güncelleme handler ────────────────────────────────── */
+    function onUpdate(data) {
+        if (!data) { showError('Oda bulunamadı.'); showScreen('room'); return; }
+
+        if (!myNum) {
+            if (data.player1 === pid)      myNum = 1;
+            else if (data.player2 === pid) myNum = 2;
+            else if (!data.player2) {
+                joinRoom(GAME_TYPE, roomCode).then(()=>myNum=2).catch(e=>showError(e.message));
+                return;
+            } else { showError('Bu oda dolu.'); return; }
+        }
+
+        if (data.status === 'waiting')  { showScreen('wait'); return; }
+        if (data.status === 'setup')    { handleSetupPhase(data); return; }
+        if (data.status === 'playing' || data.status === 'finished') { handleBattlePhase(data); }
+    }
+
+    /* ── Setup aşaması ──────────────────────────────────────────── */
+    function handleSetupPhase(data) {
+        const myReady  = myNum === 1 ? data.p1Ready  : data.p2Ready;
+        const oppReady = myNum === 1 ? data.p2Ready  : data.p1Ready;
+
+        showScreen('setup');
+
+        if (!myReady) {
+            document.getElementById('wait-opponent-setup').style.display = 'none';
+            buildSetupGrid();
+        } else {
+            document.getElementById('wait-opponent-setup').style.display = 'flex';
+            document.getElementById('ready-btn').disabled = true;
+        }
+
+        if (myReady && oppReady) showScreen('battle');
+    }
+
+    /* ── Setup grid ─────────────────────────────────────────────── */
+    function buildSetupGrid() {
+        if (document.getElementById('setup-grid').dataset.built) return;
+        document.getElementById('setup-grid').dataset.built = '1';
+
+        buildGrid('setup-grid', (r, c) => {
+            placeSelectedShip(r, c);
+        }, (r, c) => {
+            previewShip(r, c);
+        }, () => clearPreview());
+
+        buildShipList();
+    }
+
+    function buildShipList() {
+        const el  = document.getElementById('ship-list');
+        el.innerHTML = '';
+        SHIP_DEFS.forEach(ship => {
+            const item = document.createElement('div');
+            item.className = 'ship-item';
+            item.id  = `ship-${ship.id}`;
+            item.innerHTML = `
+                <div class="ship-squares">${'<div class="ship-sq"></div>'.repeat(ship.size)}</div>
+                <span>${ship.name}</span>`;
+            item.addEventListener('click', () => selectShip(ship.id));
+            el.appendChild(item);
+        });
+    }
+
+    function selectShip(id) {
+        if (placedShipIds.has(id)) return;
+        selectedShipId = id;
+        document.querySelectorAll('.ship-item').forEach(el => el.classList.remove('selected'));
+        document.getElementById(`ship-${id}`)?.classList.add('selected');
+        document.getElementById('setup-status').textContent = 'Grid'e tıkla, gemiyi yerleştir';
+    }
+
+    function rotateShip() {
+        isHorizontal = !isHorizontal;
+        document.getElementById('setup-status').textContent = isHorizontal ? 'Yön: Yatay →' : 'Yön: Dikey ↓';
+    }
+
+    function undoLastShip() {
+        if (!lastPlacedShip) return;
+        const { id, cells } = lastPlacedShip;
+        cells.forEach(key => myShips.delete(key));
+        placedShipIds.delete(id);
+        lastPlacedShip = null;
+        document.getElementById(`ship-${id}`)?.classList.remove('placed');
+        refreshSetupGrid();
+        checkReadyBtn();
+    }
+
+    function placeSelectedShip(r, c) {
+        if (!selectedShipId) return;
+        const ship  = SHIP_DEFS.find(s => s.id === selectedShipId);
+        const cells = getShipCells(r, c, ship.size, isHorizontal);
+        if (!cells || cells.some(key => myShips.has(key))) {
+            showToast('Geçersiz konum!'); return;
+        }
+        cells.forEach(key => myShips.add(key));
+        placedShipIds.add(selectedShipId);
+        lastPlacedShip = { id: selectedShipId, cells };
+        document.getElementById(`ship-${selectedShipId}`)?.classList.add('placed');
+        selectedShipId = null;
+        document.querySelectorAll('.ship-item').forEach(el => el.classList.remove('selected'));
+        refreshSetupGrid();
+        checkReadyBtn();
+    }
+
+    function previewShip(r, c) {
+        clearPreview();
+        if (!selectedShipId) return;
+        const ship  = SHIP_DEFS.find(s => s.id === selectedShipId);
+        const cells = getShipCells(r, c, ship.size, isHorizontal);
+        if (!cells) return;
+        const isValid = !cells.some(key => myShips.has(key));
+        cells.forEach(key => {
+            const [row, col] = key.split(',').map(Number);
+            const cell = document.querySelector(`#setup-grid [data-r="${row}"][data-c="${col}"]`);
+            if (cell) {
+                cell.classList.add('ship-preview');
+                if (!isValid) cell.classList.add('invalid');
+            }
+        });
+    }
+
+    function clearPreview() {
+        document.querySelectorAll('#setup-grid .ship-preview').forEach(el => {
+            el.classList.remove('ship-preview','invalid');
+        });
+    }
+
+    function refreshSetupGrid() {
+        document.querySelectorAll('#setup-grid .am-cell').forEach(cell => {
+            const key = `${cell.dataset.r},${cell.dataset.c}`;
+            cell.classList.toggle('ship-placed', myShips.has(key));
+        });
+    }
+
+    function getShipCells(r, c, size, horizontal) {
+        const cells = [];
+        for (let i = 0; i < size; i++) {
+            const nr = horizontal ? r : r + i;
+            const nc = horizontal ? c + i : c;
+            if (nr >= GRID || nc >= GRID) return null;
+            cells.push(`${nr},${nc}`);
+        }
+        return cells;
+    }
+
+    function checkReadyBtn() {
+        document.getElementById('ready-btn').disabled = (placedShipIds.size < SHIP_DEFS.length);
+    }
+
+    async function sendReady() {
+        document.getElementById('ready-btn').disabled = true;
+        document.getElementById('wait-opponent-setup').style.display = 'flex';
+        const shipsKey  = myNum === 1 ? 'p1Ships'  : 'p2Ships';
+        const readyKey  = myNum === 1 ? 'p1Ready'  : 'p2Ready';
+        await updateRoom(GAME_TYPE, roomCode, {
+            [shipsKey]:  [...myShips],
+            [readyKey]:  true
+        });
+
+        // Her iki oyuncu hazırsa oyunu başlat (host tetikler)
+        const data = await getRoomData(GAME_TYPE, roomCode);
+        if (data && data.p1Ready && data.p2Ready && myNum === 1) {
+            await updateRoom(GAME_TYPE, roomCode, { status: 'playing', currentPlayer: 1 });
+        }
+    }
+
+    /* ── Savaş aşaması ──────────────────────────────────────────── */
+    function handleBattlePhase(data) {
+        showScreen('battle');
+        buildBattleGrids(data);
+        updateBattleStatus(data);
+        if (data.status === 'finished' && !gameOver) {
+            gameOver = true;
+            setTimeout(() => showResult(data), 500);
+        }
+    }
+
+    function buildBattleGrids(data) {
+        const myKey    = myNum === 1 ? 'p1Ships'  : 'p2Ships';
+        const oppKey   = myNum === 1 ? 'p2Ships'  : 'p1Ships';
+        const myShotsKey  = myNum === 1 ? 'p1Shots'  : 'p2Shots';
+        const oppShotsKey = myNum === 1 ? 'p2Shots'  : 'p1Shots';
+
+        const myShipCells  = new Set(data[myKey]  || []);
+        const oppShipCells = new Set(data[oppKey] || []);
+        const myShots  = data[myShotsKey]  || {};
+        const oppShots = data[oppShotsKey] || {};
+
+        // Rakip grid (atış yapılabilir)
+        const isMyTurn = data.currentPlayer === myNum && data.status === 'playing';
+        buildGrid('enemy-grid', (r, c) => {
+            if (isMyTurn) shoot(r, c);
+        }, null, null, (cell) => {
+            const key = `${cell.dataset.r},${cell.dataset.c}`;
+            if (myShots[key] === 'hit')  { cell.classList.add('hit',  'fired'); cell.textContent = '💥'; }
+            if (myShots[key] === 'miss') { cell.classList.add('miss', 'fired'); cell.textContent = '○'; }
+            if (!isMyTurn || myShots[key]) cell.classList.add('fired');
+        });
+
+        // Kendi grid (gemiler + karşı atışlar)
+        buildGrid('my-grid', null, null, null, (cell) => {
+            const key = `${cell.dataset.r},${cell.dataset.c}`;
+            if (myShipCells.has(key)) cell.classList.add('ship-placed');
+            if (oppShots[key] === 'hit')  { cell.classList.add('hit',  'fired'); cell.textContent = '💥'; }
+            if (oppShots[key] === 'miss') { cell.classList.add('miss', 'fired'); cell.textContent = '○'; }
+        });
+
+        updateAvatars();
+    }
+
+    function updateAvatars() {
+        const p1img = settings.amiral_player1_img;
+        const p2img = settings.amiral_player2_img;
+        const p1n   = settings.amiral_player1_name || 'Ahmet';
+        const p2n   = settings.amiral_player2_name || 'Zeynep';
+
+        renderAmAvatar('p1-avatar', p1img, 'A', 'linear-gradient(135deg,#ffb6c1,#c8a2c8)');
+        renderAmAvatar('p2-avatar', p2img, 'Z', 'linear-gradient(135deg,#c8a2c8,#ffd49e)');
+        document.getElementById('p1-name').textContent = p1n;
+        document.getElementById('p2-name').textContent = p2n;
+    }
+
+    function renderAmAvatar(id, url, letter, grad) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = url
+            ? `<img class="am-avatar" src="${url}" alt="" onerror="this.parentElement.innerHTML='<div class=am-avatar-ph style=background:${grad}>${letter}</div>'">`
+            : `<div class="am-avatar-ph" style="background:${grad}">${letter}</div>`;
+    }
+
+    function updateBattleStatus(data) {
+        const isMyTurn = data.currentPlayer === myNum && data.status === 'playing';
+        document.getElementById('p1-indicator').classList.toggle('active', data.currentPlayer === 1 && data.status === 'playing');
+        document.getElementById('p2-indicator').classList.toggle('active', data.currentPlayer === 2 && data.status === 'playing');
+        document.getElementById('p1-badge').style.visibility = (data.currentPlayer === 1 && data.status === 'playing') ? 'visible' : 'hidden';
+        document.getElementById('p2-badge').style.visibility = (data.currentPlayer === 2 && data.status === 'playing') ? 'visible' : 'hidden';
+        if (data.status === 'playing') {
+            document.getElementById('battle-status').textContent = isMyTurn
+                ? 'Senin sıran! Rakip gridine tıkla 🎯'
+                : 'Bekle, rakibin atış yapıyor...';
+        }
+    }
+
+    /* ── Atış yap ───────────────────────────────────────────────── */
+    async function shoot(r, c) {
+        const data = await getRoomData(GAME_TYPE, roomCode);
+        if (!data || data.status !== 'playing' || data.currentPlayer !== myNum) return;
+
+        const myShotsKey  = myNum === 1 ? 'p1Shots' : 'p2Shots';
+        const oppShipsKey = myNum === 1 ? 'p2Ships' : 'p1Ships';
+        const mySunkKey   = myNum === 1 ? 'p1Sunk'  : 'p2Sunk';
+        const key = `${r},${c}`;
+
+        if ((data[myShotsKey] || {})[key]) return; // Zaten atıldı
+
+        const oppShips = new Set(data[oppShipsKey] || []);
+        const isHit    = oppShips.has(key);
+        const result   = isHit ? 'hit' : 'miss';
+
+        const newShots = { ...(data[myShotsKey] || {}), [key]: result };
+        const newSunk  = (data[mySunkKey] || 0) + (isHit ? 1 : 0);
+        const winner   = newSunk >= TOTAL_SHIP_CELLS ? myNum : null;
+        const next     = myNum === 1 ? 2 : 1;
+
+        await updateRoom(GAME_TYPE, roomCode, {
+            [myShotsKey]:  newShots,
+            [mySunkKey]:   newSunk,
+            currentPlayer: winner ? myNum : (isHit ? myNum : next), // hit = extra turn
+            winner,
+            status: winner ? 'finished' : 'playing'
+        });
+    }
+
+    /* ── Grid builder (yardımcı) ────────────────────────────────── */
+    function buildGrid(containerId, onClick, onMouseEnter, onMouseLeave, postProcess) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        // Sütun harfleri
+        const colRow = document.createElement('div');
+        colRow.style.cssText = 'display:grid;grid-template-columns:22px repeat(8,1fr);gap:3px;margin-bottom:2px';
+        colRow.innerHTML = '<div></div>' + COL_LABELS.map(l =>
+            `<div style="text-align:center;font-size:.62rem;color:var(--muted);font-weight:700">${l}</div>`
+        ).join('');
+        container.appendChild(colRow);
+
+        for (let r = 0; r < GRID; r++) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:grid;grid-template-columns:22px repeat(8,1fr);gap:3px;margin-bottom:3px';
+            row.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;font-size:.62rem;color:var(--muted);font-weight:700">${r+1}</div>`;
+
+            for (let c = 0; c < GRID; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'am-cell';
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+                if (onClick)      cell.addEventListener('click',      () => onClick(r, c));
+                if (onMouseEnter) cell.addEventListener('mouseenter', () => onMouseEnter(r, c));
+                if (onMouseLeave) cell.addEventListener('mouseleave', onMouseLeave);
+                if (postProcess)  postProcess(cell);
+                row.appendChild(cell);
+            }
+            container.appendChild(row);
+        }
+    }
+
+    /* ── Sonuç ──────────────────────────────────────────────────── */
+    function showResult(data) {
+        const p1Name = settings.amiral_player1_name || 'Ahmet';
+        const p2Name = settings.amiral_player2_name || 'Zeynep';
+        const isMe = data.winner === myNum;
+        document.getElementById('res-emoji').textContent = isMe ? '🎉' : '🥺';
+        document.getElementById('res-title').textContent = isMe ? 'Kazandın!' : 'Kaybettin!';
+        document.getElementById('res-sub').textContent   = `${data.winner === 1 ? p1Name : p2Name} tüm gemileri batırdı! ⚓`;
+        if (isMe) fireConfetti();
+        document.getElementById('result-modal').classList.add('open');
+    }
+
+    /* ── Yardımcılar ────────────────────────────────────────────── */
+    async function cancelRoom() {
+        if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+        if (roomCode) await deleteRoom(GAME_TYPE, roomCode);
+        roomCode = null; myNum = null;
+        history.replaceState({}, '', 'amiral.html');
+        showScreen('room');
+    }
+
+    function showScreen(name) {
+        ['room','wait','setup','battle'].forEach(s => {
+            document.getElementById(`${s}-screen`).style.display = name === s ? '' : 'none';
+        });
+        if (name === 'setup' && !document.getElementById('setup-grid').dataset.built) buildSetupGrid();
+    }
+
+    function showError(msg) { document.getElementById('room-error').textContent = msg; showToast(msg); }
+    function clearError()   { document.getElementById('room-error').textContent = ''; }
+    function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+
+    /* Status 'waiting' → 'setup' geçişi: her iki oyuncu katılınca host tetikler */
+    async function checkAndStartSetup() {
+        const snap = await rtdb.ref(`games/${GAME_TYPE}/${roomCode}`).once('value');
+        const data = snap.val();
+        if (data && data.player1 && data.player2 && data.status === 'waiting' && myNum === 1) {
+            await updateRoom(GAME_TYPE, roomCode, { status: 'setup' });
+        }
+    }
+
+    // Player2 katılınca setup başlatır
+    const _origOnUpdate = onUpdate;
+    // Override: waiting → setup otomatik geçiş
+    function onUpdateWrapper(data) {
+        if (!data) return;
+        if (data.status === 'waiting' && data.player1 && data.player2) {
+            checkAndStartSetup();
+        }
+        _origOnUpdate(data);
+    }
+
+    // Listener'ı override et
+    function startListeningWrapped(code) {
+        if (unsubscribe) unsubscribe();
+        unsubscribe = listenRoom(GAME_TYPE, code, onUpdateWrapper);
+    }
+
+    // handleCreate ve handleJoin'i güncelle
+    async function handleCreate() {
+        clearError();
+        const code = await createRoom(GAME_TYPE, {
+            status:'waiting', p1Ships:null, p2Ships:null, p1Ready:false, p2Ready:false,
+            p1Shots:{}, p2Shots:{}, p1Sunk:0, p2Sunk:0
+        });
+        roomCode=code; myNum=1;
+        history.replaceState({}, '', `amiral.html?room=${code}`);
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        startListeningWrapped(code);
+    }
+
+    async function handleJoin() {
+        clearError();
+        const code = document.getElementById('join-input').value.trim().toUpperCase();
+        if (code.length !== 6) { showError('Oda kodu 6 karakter olmalı.'); return; }
+        try {
+            await joinRoom(GAME_TYPE, code);
+            roomCode=code; myNum=2;
+            history.replaceState({}, '', `amiral.html?room=${code}`);
+            startListeningWrapped(code);
+        } catch (e) { showError(e.message); }
+    }
+
+    function joinByUrl(code) {
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        roomCode = code;
+        startListeningWrapped(code);
+    }
+
+    init();
+</script>
+</body>
+</html>

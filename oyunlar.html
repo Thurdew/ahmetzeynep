@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oyunlar 🎮</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-y: auto; }
+        .games-subtitle {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: .96rem;
+        }
+        .game-card { text-decoration: none; color: inherit; }
+    </style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<header class="page-header">
+    <a href="index.html" class="back-btn">← Ana Sayfa</a>
+    <h1>Oyunlar 🎮</h1>
+</header>
+
+<div class="games-wrap">
+    <p class="games-subtitle">Hangi oyunu oynamak istersin?</p>
+
+    <a class="game-card" href="xox.html">
+        <div class="game-card-icon">⭕</div>
+        <div class="game-card-text">
+            <h2>XOX</h2>
+            <p>Tic-Tac-Toe · İki telefonda karşılıklı oyna</p>
+        </div>
+    </a>
+
+    <a class="game-card" href="amiral.html">
+        <div class="game-card-icon">⚓</div>
+        <div class="game-card-text">
+            <h2>Amiral Battı</h2>
+            <p>Klasik deniz savaşı · İki telefonda karşılıklı oyna</p>
+        </div>
+    </a>
+
+    <a class="game-card" href="connect4.html">
+        <div class="game-card-icon">🔴</div>
+        <div class="game-card-text">
+            <h2>4'lü Sıra</h2>
+            <p>Connect Four · İki telefonda karşılıklı oyna</p>
+        </div>
+    </a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="firebase.js"></script>
+<script>startParticles('particles');</script>
+</body>
+</html>

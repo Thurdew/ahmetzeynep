@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorular 💬</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow: hidden; }
+    </style>
+</head>
+<body>
+
+<div id="particles"></div>
+<div id="progress-bar"></div>
+
+<!-- Skor kutusu -->
+<div id="score-box">
+    <span>💗</span>
+    <span id="sval">0</span>
+    <span style="opacity:.4;font-size:.78rem">&thinsp;/&thinsp;<span id="max-score">0</span></span>
+</div>
+
+<!-- Geri butonu -->
+<a href="index.html" class="back-btn" style="position:fixed;top:12px;left:14px;z-index:1000">← Ana Sayfa</a>
+
+<!-- Yükleniyor -->
+<div id="loading-screen" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:50">
+    <div class="spinner"></div>
+    <p style="font-family:'Playfair Display',serif;color:var(--muted)">Sorular hazırlanıyor...</p>
+</div>
+
+<!-- Soru sahnesi -->
+<div id="q-stage" style="display:none">
+    <div id="q-card">
+        <!-- renderQuestion() ile doldurulur -->
+    </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="firebase.js"></script>
+<script>
+    startParticles('particles');
+
+    /* ── Yedek sorular (Firebase boşsa kullanılır) ─────────────── */
+    const FALLBACK_QUESTIONS = [
+        { question:"İlk buluşmamızda ne giyiyordum? 👗", options:["Kırmızı bir şeyler vardı üstümde","Mavi gömlek ve kot","Siyah kapüşonlu bir şeyler","Dürüst olmak gerekirse hiç fark etmedim 😅"], answer:0, okMsg:"✅ Süper! O ilk günü ne kadar iyi hatırlıyorsun 🥰 +10 puan!", badMsg:"❌ Yanlış ama o gülümsemeyi hatırlıyorsun ya, yeter 💕", points:10 },
+        { question:"İlk 'Seni seviyorum'u kim söyledi? 💬", options:["Ben söyledim — cesaretliyim 😏","Sen söyledin — sen de cesaretlisin 🥰","İkimiz neredeyse aynı anda","Kelimelerle değil, bakışlarla söyledik"], answer:1, okMsg:"✅ O anı hatırlıyorsun! Ne güzeldi değil mi? 💕 +10 puan!", badMsg:"❌ Yanlış ama o anın güzelliği değişmez 🌸", points:10 },
+        { question:"Sence bu ilişkide en çok kim özür diliyor? 😄", options:["Sen tabii ki — ben hiç hata yapmam 😇","Ben, daima ben","İkimiz eşit olarak","Biz özür dilemeyiz, direkt barışırız 💑"], answer:2, okMsg:"✅ Dengeli bir ilişki bu! 💫 +10 puan!", badMsg:"❌ Hmm, farklı düşünüyoruz ama yine de affediyorum 💕", points:10 },
+        { question:"Beni en çok ne mutlu ediyor? 🌟", options:["Yanımda olduğunda","Güldüğünü gördüğümde","Seninle sessizce oturduğumuzda","Hepsi — her halin benim için özel 🥺"], answer:3, okMsg:"✅ Tam bildin! Her halin gerçekten çok özel 💕 +10 puan!", badMsg:"❌ Yanlış ama cevap hepsinde gizli 🌸", points:10 },
+        { question:"Kavga ettiğimizde genellikle ne olur? 😂", options:["Saatlerce küs duruyoruz","Biri dayanamayıp güldürüyor diğerini","Abartılı özür mesajları yağıyor","Hangi konu olduğunu bile unutuyoruz 🙈"], answer:1, okMsg:"✅ Ha! Biri dayanamıyor işte 😂 +10 puan!", badMsg:"❌ Yanlış! Ama ikimiz de biliyoruz gerçeği 😄", points:10 },
+        { question:"Beni en iyi anlatan üç kelime hangisi? ✨", options:["Sevgi, şefkat, sabır","Komik, tatlı, çılgın 🤪","Romantik, özgün, samimi","Hepsini bir araya getirince sen çıkıyor 💛"], answer:3, okMsg:"✅ En güzel cevap! 💕 +10 puan!", badMsg:"❌ Yanlış ama en güzel özelliğin bu soruya gülen yüzün 😄", points:10 },
+        { question:"İkimiz için yemek sipariş etsem ne söylersin? 🍕", options:["Sürpriz yap, ne seçersen yer!","Önceki yerde ne yemiştik, onu!","Benim ne istediğimi zaten biliyorsun 😏","Menüye bakmadan 'istediğim yok' derim 😂"], answer:2, okMsg:"✅ Evet, gerçekten biliyorum! 😄 +10 puan!", badMsg:"❌ Yanlış ama bir dahaki sefere test ederim 🍕", points:10 },
+        { question:"Birlikte en mutlu olduğumuz an hangisi? 🌟", options:["Film izlerken birbirimize sarılırken","Yeni bir yere gidip keşfederken","Hiçbir şey yapmadan yanyana dururken","Seninle her an mutluyum, seçemiyorum 🥺"], answer:3, okMsg:"✅ Cevabın tam kalbimden geçiyor ❤️ +10 puan!", badMsg:"❌ Yanlış ama gerçek cevabı zaten biliyorsun 💕", points:10 },
+        { question:"Gece saat 02:00'de 'uyuyor musun?' atsam ne yaparsın? 🌙", options:["'Hayır, seni bekliyordum' derim 🥰","Telefonu kapatırım, sabah konuşuruz 😴","'Bir şey mi oldu?' diye korkarım 😅","Zaten uyumuyorum, sen atacağını bilirdim 😂"], answer:3, okMsg:"✅ Gerçekten biliyordun, değil mi? 😂 +10 puan!", badMsg:"❌ Yanlış ama o geceleri hatırlıyorum 😄", points:10 },
+        { question:"Bu yolculuğun sonuna geldin. Şu an ne hissediyorsun? 🥺", options:["Çok duygulandım 😭","Gülümsedim ve mutlu oldum 🥰","İkisi birden — hem ağladım hem güldüm","Seni çok seviyorum demek için daha ne gerekiyor ki? 💕"], answer:3, okMsg:"✅ Bu cevap beni de duygulandırdı... 💕 +10 puan!", badMsg:"❌ Yanlış ama bu sorunun doğru cevabı hepsinde gizli 🌸", points:10 }
+    ];
+
+    /* ── State ─────────────────────────────────────────────────── */
+    let questions   = [];
+    let qIndex      = 0;
+    let score       = 0;
+    let maxScore    = 0;
+    let answered    = false;
+
+    const LETTERS   = ['A','B','C','D'];
+
+    /* ── Başlat ─────────────────────────────────────────────────── */
+    async function init() {
+        let loaded = await loadQuestions();
+        questions  = loaded.length ? loaded : FALLBACK_QUESTIONS;
+        maxScore   = questions.reduce((s, q) => s + (q.points || 10), 0);
+        document.getElementById('max-score').textContent = maxScore;
+
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('q-stage').style.display        = 'flex';
+        showQuestion(0);
+    }
+
+    /* ── Soru göster ────────────────────────────────────────────── */
+    function showQuestion(i) {
+        qIndex   = i;
+        answered = false;
+        updateProgress();
+
+        const q   = questions[i];
+        const card = document.getElementById('q-card');
+
+        let optsHTML = '';
+        (q.options || []).forEach((opt, idx) => {
+            optsHTML += `
+            <button class="q-opt" data-idx="${idx}" onclick="pick(${idx})">
+                <span class="q-letter">${LETTERS[idx]}</span>
+                <span>${opt}</span>
+            </button>`;
+        });
+
+        card.innerHTML = `
+        <div class="q-body">
+            <div class="q-badge">Soru Zamanı 🌟</div>
+            <div class="q-num">Soru ${i + 1} / ${questions.length}</div>
+            <p class="q-text">${q.question}</p>
+            <div class="q-options">${optsHTML}</div>
+            <div class="q-feedback" id="qfb"></div>
+            <div class="q-footer">
+                <span class="q-progress-txt">Soru ${i + 1} / ${questions.length}</span>
+                <button class="btn btn-primary btn-sm" id="qnext" onclick="nextQ()" style="visibility:hidden">Devam Et →</button>
+            </div>
+        </div>`;
+    }
+
+    /* ── Cevap seç ──────────────────────────────────────────────── */
+    function pick(idx) {
+        if (answered) return;
+        answered = true;
+
+        const q       = questions[qIndex];
+        const opts    = document.querySelectorAll('.q-opt');
+        const fb      = document.getElementById('qfb');
+        const nextBtn = document.getElementById('qnext');
+
+        opts.forEach(b => b.disabled = true);
+
+        if (idx === (q.answer ?? 0)) {
+            opts[idx].classList.add('correct');
+            fb.textContent = q.okMsg || '✅ Doğru!';
+            fb.className   = 'q-feedback ok';
+            score += q.points || 10;
+            updateScore();
+        } else {
+            opts[idx].classList.add('wrong');
+            opts[q.answer ?? 0].classList.add('correct');
+            fb.textContent = q.badMsg || '❌ Yanlış.';
+            fb.className   = 'q-feedback bad';
+        }
+
+        nextBtn.style.visibility = 'visible';
+    }
+
+    /* ── Sonraki soru ───────────────────────────────────────────── */
+    function nextQ() {
+        const card = document.getElementById('q-card');
+        card.style.opacity   = '0';
+        card.style.transform = 'translateY(12px) scale(.97)';
+
+        setTimeout(() => {
+            card.style.transition = 'none';
+            card.style.opacity    = '';
+            card.style.transform  = '';
+
+            if (qIndex + 1 >= questions.length) {
+                showFinal();
+            } else {
+                requestAnimationFrame(() => {
+                    card.style.transition = '';
+                    showQuestion(qIndex + 1);
+                });
+            }
+        }, 380);
+    }
+
+    /* ── Final ekranı ───────────────────────────────────────────── */
+    function showFinal() {
+        const card  = document.getElementById('q-card');
+        const perc  = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+
+        let msg = '';
+        if (perc === 100)      msg = 'Mükemmel! Beni çok iyi tanıyorsun 🥰';
+        else if (perc >= 70)   msg = 'Harika! Aramızdaki bağ çok güçlü 💕';
+        else if (perc >= 40)   msg = 'Fena değil! Daha çok zaman geçirelim 🌸';
+        else                   msg = 'Beni daha iyi tanımalısın 😄 Ama seni seviyorum!';
+
+        card.innerHTML = `
+        <div class="final-body">
+            <div class="f-congrats">Tebrikler Zeynep! 🎉</div>
+            <div class="f-score-num">${score}<span class="f-score-max">/${maxScore}</span></div>
+            <div class="f-score-lbl">puan topladın — %${perc}</div>
+            <div class="f-msgbox"><p>${msg}</p></div>
+            <span class="gift-icon">🎁</span>
+            <a href="album.html" class="btn btn-gold" style="margin-top:8px">Anılarımıza Bak 🌸</a>
+            <button class="btn btn-secondary btn-sm" onclick="restart()">Tekrar Oyna 🔄</button>
+        </div>`;
+
+        document.getElementById('progress-bar').style.width = '100%';
+        setTimeout(fireConfetti, 300);
+    }
+
+    /* ── Yardımcılar ────────────────────────────────────────────── */
+    function updateScore() {
+        document.getElementById('sval').textContent = score;
+        const box = document.getElementById('score-box');
+        box.classList.remove('bump');
+        void box.offsetWidth;
+        box.classList.add('bump');
+    }
+
+    function updateProgress() {
+        const pct = questions.length > 0 ? ((qIndex) / questions.length) * 100 : 0;
+        document.getElementById('progress-bar').style.width = pct + '%';
+    }
+
+    function restart() {
+        score   = 0;
+        qIndex  = 0;
+        answered = false;
+        document.getElementById('sval').textContent = '0';
+        document.getElementById('progress-bar').style.width = '0%';
+        showQuestion(0);
+    }
+
+    init();
+</script>
+</body>
+</html>

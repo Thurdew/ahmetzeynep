@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XOX 🎮</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-y: auto; }
+
+        .xox-wrap {
+            max-width: 440px;
+            margin: 0 auto;
+            padding: 12px 16px 60px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Durum çubuğu */
+        .xox-status {
+            background: rgba(255,255,255,.9);
+            border-radius: var(--radius-card);
+            padding: 14px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(200,162,200,.2);
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem;
+            color: var(--deep);
+        }
+
+        /* Oyuncu göstergeleri */
+        .xox-players {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+        }
+
+        .xox-player {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            border: 2px solid transparent;
+            transition: border-color .3s, background .3s;
+        }
+
+        .xox-player.active {
+            border-color: var(--lilac);
+            background: rgba(200,162,200,.1);
+        }
+
+        .xox-avatar {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--pink);
+        }
+
+        .xox-avatar-placeholder {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem; color: #fff;
+            border: 3px solid var(--pink);
+        }
+
+        .xox-player-name {
+            font-family: 'Playfair Display', serif;
+            font-size: .88rem;
+            color: var(--deep);
+        }
+
+        .xox-turn-badge {
+            font-size: .68rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--lilac);
+            font-weight: 700;
+        }
+
+        /* Tahta */
+        .xox-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 320px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .xox-cell {
+            aspect-ratio: 1;
+            border-radius: 18px;
+            background: rgba(255,255,255,.85);
+            border: 2.5px solid #ede4f5;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            transition: transform .2s, border-color .2s, box-shadow .2s;
+            box-shadow: 0 4px 14px rgba(200,162,200,.15);
+            position: relative;
+        }
+
+        .xox-cell:hover:not(.taken):not(.disabled) {
+            border-color: var(--lilac);
+            transform: scale(1.06);
+            box-shadow: 0 8px 24px rgba(200,162,200,.3);
+        }
+
+        .xox-cell.taken, .xox-cell.disabled { cursor: default; }
+
+        .xox-cell img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 14px;
+            animation: popin .25s ease;
+        }
+
+        .xox-cell .cell-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            animation: popin .25s ease;
+        }
+
+        .xox-cell.win-cell {
+            border-color: var(--gold) !important;
+            box-shadow: 0 0 0 3px rgba(245,200,66,.5) !important;
+            animation: win-pulse .7s ease infinite alternate;
+        }
+    </style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<header class="page-header">
+    <a href="oyunlar.html" class="back-btn">← Oyunlar</a>
+    <h1>XOX ⭕</h1>
+</header>
+
+<!-- Oda seçim ekranı -->
+<div id="room-screen" class="xox-wrap">
+    <div style="text-align:center;font-family:'Playfair Display',serif;color:var(--deep);font-size:1.5rem;margin:8px 0">
+        Oyuna Başla
+    </div>
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:26px 22px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:14px">
+        <button class="btn btn-primary btn-block" onclick="handleCreate()">✨ Yeni Oyun Başlat</button>
+        <div class="room-divider">veya</div>
+        <input class="room-input" id="join-input" placeholder="ODA KODU" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-secondary btn-block" onclick="handleJoin()">Odaya Katıl →</button>
+        <p class="room-error" id="room-error"></p>
+    </div>
+</div>
+
+<!-- Bekleme ekranı -->
+<div id="wait-screen" class="xox-wrap" style="display:none">
+    <div style="background:rgba(255,255,255,.9);border-radius:var(--radius-card);padding:32px 22px;box-shadow:var(--card-shadow);text-align:center;display:flex;flex-direction:column;gap:16px;align-items:center">
+        <p style="font-family:'Playfair Display',serif;color:var(--muted);font-size:.9rem">Oda kodunu karşı oyuncuya paylaş</p>
+        <div class="room-code-display" id="room-code-display"></div>
+        <div class="waiting-indicator">
+            <div class="waiting-dots"><span></span><span></span><span></span></div>
+            Karşı oyuncu bekleniyor...
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="cancelRoom()">İptal</button>
+    </div>
+</div>
+
+<!-- Oyun ekranı -->
+<div id="game-screen" class="xox-wrap" style="display:none">
+    <div class="xox-players" id="xox-players">
+        <div class="xox-player" id="p1-indicator">
+            <div id="p1-avatar"></div>
+            <span class="xox-player-name" id="p1-name">Oyuncu 1</span>
+            <span class="xox-turn-badge" id="p1-badge" style="visibility:hidden">Sıra sende</span>
+        </div>
+        <div class="xox-player" id="p2-indicator">
+            <div id="p2-avatar"></div>
+            <span class="xox-player-name" id="p2-name">Oyuncu 2</span>
+            <span class="xox-turn-badge" id="p2-badge" style="visibility:hidden">Sıra sende</span>
+        </div>
+    </div>
+    <div class="xox-status" id="xox-status">Oyun başlıyor...</div>
+    <div class="xox-board" id="xox-board">
+        <!-- 9 hücre -->
+    </div>
+</div>
+
+<!-- Sonuç modalı -->
+<div class="modal-overlay" id="result-modal">
+    <div class="modal-box" style="text-align:center;align-items:center;gap:14px">
+        <div class="result-emoji" id="res-emoji">🎉</div>
+        <h2 class="result-title" id="res-title">Kazandın!</h2>
+        <p class="result-sub" id="res-sub"></p>
+        <button class="btn btn-primary btn-block" onclick="rematch()">Tekrar Oyna 🔄</button>
+        <a href="oyunlar.html" class="btn btn-secondary btn-block">Oyunlar Menüsü</a>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="firebase.js"></script>
+<script>
+    startParticles('particles');
+
+    /* ── Sabitler ──────────────────────────────────────────────── */
+    const WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    const GAME_TYPE = 'xox';
+
+    /* ── State ─────────────────────────────────────────────────── */
+    let roomCode    = null;
+    let myNum       = null;   // 1 | 2
+    let settings    = {};
+    let unsubscribe = null;
+    let gameOver    = false;
+
+    const pid = getPlayerId();
+
+    /* ── Fotoğrafları yükle ────────────────────────────────────── */
+    async function init() {
+        settings = await loadSettings();
+
+        // URL'de oda kodu varsa direkt bağlan
+        const param = new URLSearchParams(location.search).get('room');
+        if (param) joinByUrl(param.toUpperCase());
+    }
+
+    /* ── Oda oluştur ────────────────────────────────────────────── */
+    async function handleCreate() {
+        clearError();
+        const code = await createRoom(GAME_TYPE, { board: Array(9).fill(null) });
+        roomCode = code;
+        myNum    = 1;
+        history.replaceState({}, '', `xox.html?room=${code}`);
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        startListening(code);
+    }
+
+    /* ── Odaya katıl (input) ────────────────────────────────────── */
+    async function handleJoin() {
+        clearError();
+        const code = document.getElementById('join-input').value.trim().toUpperCase();
+        if (code.length !== 6) { showError('Oda kodu 6 karakter olmalı.'); return; }
+        try {
+            await joinRoom(GAME_TYPE, code);
+            roomCode = code;
+            myNum    = 2;
+            history.replaceState({}, '', `xox.html?room=${code}`);
+            startListening(code);
+        } catch (e) { showError(e.message); }
+    }
+
+    /* ── URL ile katıl ──────────────────────────────────────────── */
+    async function joinByUrl(code) {
+        showScreen('wait');
+        document.getElementById('room-code-display').textContent = code;
+        roomCode = code;
+        startListening(code);
+    }
+
+    /* ── RTDB dinle ─────────────────────────────────────────────── */
+    function startListening(code) {
+        if (unsubscribe) unsubscribe();
+        unsubscribe = listenRoom(GAME_TYPE, code, onRoomUpdate);
+    }
+
+    function onRoomUpdate(data) {
+        if (!data) { showError('Oda bulunamadı.'); showScreen('room'); return; }
+
+        // Oyuncu numarasını belirle
+        if (!myNum) {
+            if (data.player1 === pid)      myNum = 1;
+            else if (data.player2 === pid) myNum = 2;
+            else if (!data.player2) {
+                // Katılmamışsa, katıl
+                joinRoom(GAME_TYPE, roomCode).then(() => { myNum = 2; }).catch(e => showError(e.message));
+                return;
+            } else { showError('Bu oda dolu.'); return; }
+        }
+
+        if (data.status === 'waiting') {
+            showScreen('wait');
+            return;
+        }
+
+        showScreen('game');
+        renderBoard(data);
+        updateStatus(data);
+
+        if (data.status === 'finished' && !gameOver) {
+            gameOver = true;
+            setTimeout(() => showResult(data), 600);
+        }
+    }
+
+    /* ── Tahta render ───────────────────────────────────────────── */
+    function buildBoard() {
+        const board = document.getElementById('xox-board');
+        board.innerHTML = '';
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'xox-cell';
+            cell.dataset.i = i;
+            cell.addEventListener('click', () => handleMove(i));
+            board.appendChild(cell);
+        }
+        buildAvatars();
+    }
+
+    function buildAvatars() {
+        renderAvatar('p1-avatar', settings.xox_player1_img, 'A', 'linear-gradient(135deg,#ffb6c1,#c8a2c8)');
+        renderAvatar('p2-avatar', settings.xox_player2_img, 'Z', 'linear-gradient(135deg,#c8a2c8,#ffd49e)');
+        document.getElementById('p1-name').textContent = settings.xox_player1_name || 'Ahmet';
+        document.getElementById('p2-name').textContent = settings.xox_player2_name || 'Zeynep';
+    }
+
+    function renderAvatar(containerId, imgUrl, fallbackLetter, gradient) {
+        const el = document.getElementById(containerId);
+        if (imgUrl) {
+            el.innerHTML = `<img class="xox-avatar" src="${imgUrl}" alt=""
+                onerror="this.parentElement.innerHTML='<div class=xox-avatar-placeholder style=background:${gradient}>${fallbackLetter}</div>'">`;
+        } else {
+            el.innerHTML = `<div class="xox-avatar-placeholder" style="background:${gradient}">${fallbackLetter}</div>`;
+        }
+    }
+
+    function renderBoard(data) {
+        const board = data.board || Array(9).fill(null);
+        const cells = document.querySelectorAll('.xox-cell');
+
+        cells.forEach((cell, i) => {
+            const owner = board[i];
+            cell.classList.toggle('taken', !!owner);
+            cell.classList.toggle('disabled', data.status === 'finished' || data.currentPlayer !== myNum);
+
+            if (owner && !cell.dataset.rendered) {
+                cell.dataset.rendered = '1';
+                const imgUrl = owner === 1 ? settings.xox_player1_img : settings.xox_player2_img;
+                const letter = owner === 1 ? 'A' : 'Z';
+                const grad   = owner === 1 ? 'linear-gradient(135deg,#ffb6c1,#c8a2c8)' : 'linear-gradient(135deg,#c8a2c8,#ffd49e)';
+
+                if (imgUrl) {
+                    cell.innerHTML = `<img src="${imgUrl}" alt="" onerror="this.outerHTML='<span class=cell-text style=color:var(--lilac)>${letter}</span>'">`;
+                } else {
+                    cell.innerHTML = `<span class="cell-text" style="color:var(--lilac)">${letter}</span>`;
+                }
+            } else if (!owner) {
+                cell.innerHTML = '';
+                delete cell.dataset.rendered;
+            }
+        });
+
+        // Kazanma hücrelerini işaretle
+        if (data.winner && data.winner !== 'draw') {
+            const board9 = data.board || [];
+            WIN_LINES.forEach(line => {
+                if (line.every(i => board9[i] === data.winner)) {
+                    line.forEach(i => cells[i].classList.add('win-cell'));
+                }
+            });
+        }
+    }
+
+    function updateStatus(data) {
+        const statusEl = document.getElementById('xox-status');
+        const isMyTurn = data.currentPlayer === myNum && data.status === 'playing';
+
+        document.getElementById('p1-indicator').classList.toggle('active', data.currentPlayer === 1 && data.status === 'playing');
+        document.getElementById('p2-indicator').classList.toggle('active', data.currentPlayer === 2 && data.status === 'playing');
+        document.getElementById('p1-badge').style.visibility = (data.currentPlayer === 1 && data.status === 'playing') ? 'visible' : 'hidden';
+        document.getElementById('p2-badge').style.visibility = (data.currentPlayer === 2 && data.status === 'playing') ? 'visible' : 'hidden';
+
+        if (data.status === 'playing') {
+            statusEl.textContent = isMyTurn ? 'Senin sıran! 🎯' : 'Bekle, rakibin düşünüyor...';
+        }
+    }
+
+    /* ── Hamle yap ──────────────────────────────────────────────── */
+    async function handleMove(i) {
+        const data = await getRoomData(GAME_TYPE, roomCode);
+        if (!data) return;
+        if (data.status !== 'playing') return;
+        if (data.currentPlayer !== myNum) return;
+        if (data.board[i] !== null) return;
+
+        const newBoard = [...data.board];
+        newBoard[i]    = myNum;
+
+        const winner   = checkWin(newBoard, myNum) ? myNum : (newBoard.every(c => c !== null) ? 'draw' : null);
+        const next     = winner ? myNum : (myNum === 1 ? 2 : 1);
+        const status   = winner ? 'finished' : 'playing';
+
+        await updateRoom(GAME_TYPE, roomCode, {
+            board:         newBoard,
+            currentPlayer: next,
+            winner,
+            status
+        });
+    }
+
+    /* ── Kazanma kontrolü ───────────────────────────────────────── */
+    function checkWin(board, player) {
+        return WIN_LINES.some(line => line.every(i => board[i] === player));
+    }
+
+    /* ── Sonuç ──────────────────────────────────────────────────── */
+    function showResult(data) {
+        const p1Name = settings.xox_player1_name || 'Ahmet';
+        const p2Name = settings.xox_player2_name || 'Zeynep';
+
+        if (data.winner === 'draw') {
+            document.getElementById('res-emoji').textContent = '🤝';
+            document.getElementById('res-title').textContent = 'Berabere!';
+            document.getElementById('res-sub').textContent   = 'İkisi de iyi oynadı 💕';
+        } else {
+            const winnerName = data.winner === 1 ? p1Name : p2Name;
+            const isMe       = data.winner === myNum;
+            document.getElementById('res-emoji').textContent = isMe ? '🎉' : '🥺';
+            document.getElementById('res-title').textContent = isMe ? 'Kazandın!' : 'Kaybettin!';
+            document.getElementById('res-sub').textContent   = `${winnerName} bu seferi aldı 💕`;
+            if (isMe) fireConfetti();
+        }
+        document.getElementById('result-modal').classList.add('open');
+    }
+
+    /* ── Tekrar ─────────────────────────────────────────────────── */
+    async function rematch() {
+        document.getElementById('result-modal').classList.remove('open');
+        gameOver = false;
+        await updateRoom(GAME_TYPE, roomCode, {
+            board:         Array(9).fill(null),
+            currentPlayer: 1,
+            winner:        null,
+            status:        'playing'
+        });
+        document.querySelectorAll('.xox-cell').forEach(c => {
+            c.classList.remove('taken','disabled','win-cell');
+            c.innerHTML = '';
+            delete c.dataset.rendered;
+        });
+    }
+
+    /* ── İptal ──────────────────────────────────────────────────── */
+    async function cancelRoom() {
+        if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+        if (roomCode) await deleteRoom(GAME_TYPE, roomCode);
+        roomCode = null; myNum = null;
+        history.replaceState({}, '', 'xox.html');
+        showScreen('room');
+    }
+
+    /* ── Ekran geçişleri ────────────────────────────────────────── */
+    function showScreen(name) {
+        document.getElementById('room-screen').style.display = name === 'room'  ? '' : 'none';
+        document.getElementById('wait-screen').style.display = name === 'wait'  ? '' : 'none';
+        document.getElementById('game-screen').style.display = name === 'game'  ? '' : 'none';
+        if (name === 'game' && !document.getElementById('xox-board').children.length) buildBoard();
+    }
+
+    /* ── Hata mesajları ─────────────────────────────────────────── */
+    function showError(msg) { document.getElementById('room-error').textContent = msg; showToast(msg); }
+    function clearError()   { document.getElementById('room-error').textContent = ''; }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    init();
+</script>
+</body>
+</html>

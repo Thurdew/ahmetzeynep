@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Paneli 🔐</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-y: auto; }
+
+        /* Şifre kutusu */
+        #admin-lock {
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; z-index: 900;
+        }
+
+        .lock-card {
+            background: var(--white); border-radius: var(--radius-card);
+            padding: 40px 28px; max-width: 380px; width: 100%;
+            text-align: center; box-shadow: var(--card-shadow);
+            display: flex; flex-direction: column; gap: 18px;
+        }
+
+        .lock-card h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.7rem; color: var(--deep);
+        }
+
+        .lock-card p { font-size: .9rem; color: var(--muted); }
+
+        /* Admin paneli */
+        #admin-panel {
+            max-width: 900px; margin: 0 auto;
+            padding: 16px 16px 80px;
+            position: relative; z-index: 1;
+            display: none;
+        }
+
+        /* Sekme başlığı */
+        .admin-tabs {
+            display: flex; gap: 6px; overflow-x: auto;
+            padding-bottom: 4px; margin-bottom: 20px;
+            scrollbar-width: none;
+        }
+
+        .admin-tabs::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            flex-shrink: 0; padding: 10px 20px;
+            border-radius: var(--radius-btn);
+            border: 2px solid #ede4f5;
+            background: rgba(255,255,255,.8);
+            font-family: 'Playfair Display', serif;
+            font-size: .88rem; color: var(--muted);
+            cursor: pointer; transition: all .2s;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--pink), var(--lilac));
+            border-color: transparent; color: var(--white);
+            box-shadow: var(--btn-shadow);
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Admin kart */
+        .admin-card {
+            background: rgba(255,255,255,.9); border-radius: var(--radius-card);
+            padding: 22px; margin-bottom: 16px;
+            box-shadow: 0 6px 28px rgba(200,162,200,.18);
+        }
+
+        .admin-card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem; color: var(--deep); margin-bottom: 14px;
+        }
+
+        /* Form */
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 160px; }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+        .form-group label { font-size: .78rem; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+        .form-input, .form-select, .form-textarea {
+            padding: 10px 13px; border: 2px solid #ede4f5; border-radius: var(--radius-sm);
+            font-family: 'Lato', sans-serif; font-size: .9rem; color: var(--deep);
+            background: #faf4ff; outline: none; transition: border-color .2s; width: 100%;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--lilac); }
+        .form-textarea { resize: vertical; min-height: 70px; }
+
+        /* Fotoğraf listesi */
+        .photo-grid-admin {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px; margin-top: 12px;
+        }
+
+        .photo-admin-item {
+            position: relative; border-radius: 12px;
+            overflow: hidden; aspect-ratio: 4/3;
+            box-shadow: 0 4px 14px rgba(200,162,200,.2);
+            background: #f3eaff;
+        }
+
+        .photo-admin-item img { width:100%; height:100%; object-fit:cover; }
+
+        .photo-admin-item .del-photo-btn {
+            position: absolute; top: 5px; right: 5px;
+            background: rgba(200,30,30,.85); border: none; border-radius: 50%;
+            width: 26px; height: 26px; color: #fff; font-size: .85rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform .2s;
+        }
+
+        .photo-admin-item .del-photo-btn:hover { transform: scale(1.15); }
+
+        .photo-section-label {
+            font-family: 'Playfair Display', serif; font-size: .82rem;
+            color: var(--muted); font-style: italic; text-align:center;
+            padding: 4px 0;
+        }
+
+        /* Soru listesi */
+        .q-admin-row {
+            padding: 12px 14px; border: 2px solid #ede4f5; border-radius: var(--radius-sm);
+            margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;
+            background: #faf4ff; transition: border-color .2s;
+        }
+
+        .q-admin-row:hover { border-color: rgba(200,162,200,.4); }
+
+        .q-admin-text { flex: 1; font-size: .86rem; color: var(--deep); line-height: 1.4; }
+        .q-admin-text strong { font-family: 'Playfair Display', serif; }
+
+        .q-admin-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+        /* Ayarlar: oyuncu fotoğrafları */
+        .settings-game { margin-bottom: 20px; }
+
+        .settings-game h4 {
+            font-family: 'Playfair Display', serif; font-size: .95rem;
+            color: var(--deep); margin-bottom: 10px; padding-bottom: 6px;
+            border-bottom: 2px solid #ede4f5;
+        }
+
+        .player-setting-row {
+            display: grid; grid-template-columns: 60px 1fr; gap: 12px;
+            align-items: center; margin-bottom: 10px;
+        }
+
+        .player-preview {
+            width: 55px; height: 55px; border-radius: 50%;
+            object-fit: cover; border: 3px solid var(--pink);
+            background: linear-gradient(135deg,#ffb6c1,#c8a2c8);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif; color: #fff; font-size: 1.2rem;
+            overflow: hidden;
+        }
+
+        .player-preview img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+    </style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<!-- Şifre ekranı -->
+<div id="admin-lock">
+    <div class="lock-card">
+        <div style="font-size:3rem">🔐</div>
+        <h1>Admin Paneli</h1>
+        <p>Devam etmek için şifreyi gir</p>
+        <div class="form-group">
+            <input class="form-input" type="password" id="pw-input" placeholder="Şifre"
+                   onkeydown="if(event.key==='Enter')checkPw()">
+        </div>
+        <p style="font-size:.8rem;color:#c0392b;min-height:18px" id="pw-error"></p>
+        <button class="btn btn-primary btn-block" onclick="checkPw()">Giriş Yap →</button>
+    </div>
+</div>
+
+<!-- Admin paneli -->
+<header class="page-header" id="admin-header" style="display:none">
+    <a href="index.html" class="back-btn">← Ana Sayfa</a>
+    <h1>Admin 🔐</h1>
+</header>
+
+<div id="admin-panel">
+    <!-- Sekmeler -->
+    <div class="admin-tabs">
+        <button class="tab-btn active" onclick="switchTab('photos')">📸 Fotoğraflar</button>
+        <button class="tab-btn" onclick="switchTab('questions')">💬 Sorular</button>
+        <button class="tab-btn" onclick="switchTab('settings')">⚙️ Oyun Ayarları</button>
+    </div>
+
+    <!-- ── Fotoğraflar ── -->
+    <div class="tab-panel active" id="tab-photos">
+        <div class="admin-card">
+            <h3>Fotoğraf Ekle</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>FOTOĞRAF URL'İ</label>
+                    <input class="form-input" id="photo-url" placeholder="https://..." type="url">
+                </div>
+                <div class="form-group">
+                    <label>BÖLÜM</label>
+                    <select class="form-select" id="photo-section">
+                        <option value="ilk">📖 İlk Günlerimiz</option>
+                        <option value="macera">🌍 Maceralarımız</option>
+                        <option value="gundelik">☀️ Gündelik Sihir</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>AÇIKLAMA (isteğe bağlı)</label>
+                <input class="form-input" id="photo-caption" placeholder="Bu anın hikayesi...">
+            </div>
+            <!-- URL önizleme -->
+            <div id="photo-preview-wrap" style="display:none;margin-bottom:10px">
+                <img id="photo-preview-img" style="max-height:120px;border-radius:10px;object-fit:cover" src="" alt="">
+            </div>
+            <button class="btn btn-primary" id="add-photo-btn" onclick="addPhotoHandler()">+ Fotoğraf Ekle</button>
+        </div>
+
+        <div class="admin-card">
+            <h3>Mevcut Fotoğraflar</h3>
+            <div id="photos-loading" style="text-align:center;padding:20px"><div class="spinner"></div></div>
+            <div id="photos-list"></div>
+        </div>
+    </div>
+
+    <!-- ── Sorular ── -->
+    <div class="tab-panel" id="tab-questions">
+        <div class="admin-card">
+            <h3>Yeni Soru Ekle</h3>
+            <div class="form-group">
+                <label>SORU METNİ</label>
+                <textarea class="form-textarea" id="q-text" placeholder="Soru buraya..."></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>SEÇENEK A</label>
+                    <input class="form-input" id="q-opt0" placeholder="A şıkkı">
+                </div>
+                <div class="form-group">
+                    <label>SEÇENEK B</label>
+                    <input class="form-input" id="q-opt1" placeholder="B şıkkı">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>SEÇENEK C</label>
+                    <input class="form-input" id="q-opt2" placeholder="C şıkkı (isteğe bağlı)">
+                </div>
+                <div class="form-group">
+                    <label>SEÇENEK D</label>
+                    <input class="form-input" id="q-opt3" placeholder="D şıkkı (isteğe bağlı)">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>DOĞRU CEVAP</label>
+                    <select class="form-select" id="q-answer">
+                        <option value="0">A</option>
+                        <option value="1">B</option>
+                        <option value="2">C</option>
+                        <option value="3">D</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>PUAN</label>
+                    <input class="form-input" id="q-points" type="number" value="10" min="1" max="100">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>DOĞRU CEVAP MESAJI</label>
+                <input class="form-input" id="q-ok" placeholder="✅ Doğru! +10 puan!">
+            </div>
+            <div class="form-group">
+                <label>YANLIŞ CEVAP MESAJI</label>
+                <input class="form-input" id="q-bad" placeholder="❌ Yanlış. (0 puan)">
+            </div>
+            <button class="btn btn-primary" onclick="addQuestionHandler()">+ Soru Ekle</button>
+        </div>
+
+        <div class="admin-card">
+            <h3>Mevcut Sorular</h3>
+            <div id="questions-loading" style="text-align:center;padding:20px"><div class="spinner"></div></div>
+            <div id="questions-list"></div>
+        </div>
+    </div>
+
+    <!-- ── Oyun Ayarları ── -->
+    <div class="tab-panel" id="tab-settings">
+        <div class="admin-card">
+            <h3>Oyuncu Bilgileri</h3>
+            <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">
+                Bu fotoğraflar ve isimler tüm oyunlarda kullanılır. Boş bırakılan alanlar varsayılan görsel kullanır.
+            </p>
+
+            <!-- Oyuncu 1 -->
+            <div class="settings-game">
+                <h4>Oyuncu 1 (Ahmet)</h4>
+                <div class="player-setting-row">
+                    <div class="player-preview" id="p1-preview-wrap">A</div>
+                    <div class="form-group" style="margin:0">
+                        <label>FOTOĞRAF URL'İ</label>
+                        <input class="form-input" id="s-p1-img" placeholder="https://..." oninput="previewPlayerImg('p1-preview-wrap', this.value, 'A')">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>İSİM</label>
+                    <input class="form-input" id="s-p1-name" placeholder="Ahmet">
+                </div>
+            </div>
+
+            <!-- Oyuncu 2 -->
+            <div class="settings-game">
+                <h4>Oyuncu 2 (Zeynep)</h4>
+                <div class="player-setting-row">
+                    <div class="player-preview" id="p2-preview-wrap" style="background:linear-gradient(135deg,#c8a2c8,#ffd49e)">Z</div>
+                    <div class="form-group" style="margin:0">
+                        <label>FOTOĞRAF URL'İ</label>
+                        <input class="form-input" id="s-p2-img" placeholder="https://..." oninput="previewPlayerImg('p2-preview-wrap', this.value, 'Z')">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>İSİM</label>
+                    <input class="form-input" id="s-p2-name" placeholder="Zeynep">
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-block" onclick="saveSettings()">Ayarları Kaydet ✓</button>
+        </div>
+    </div>
+</div>
+
+<!-- Soru düzenleme modalı -->
+<div class="modal-overlay" id="edit-modal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+        <h2>Soruyu Düzenle</h2>
+        <input type="hidden" id="edit-q-id">
+        <div class="form-group">
+            <label>SORU METNİ</label>
+            <textarea class="form-textarea" id="edit-q-text"></textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>SEÇENEK A</label><input class="form-input" id="edit-q-opt0">
+            </div>
+            <div class="form-group">
+                <label>SEÇENEK B</label><input class="form-input" id="edit-q-opt1">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>SEÇENEK C</label><input class="form-input" id="edit-q-opt2">
+            </div>
+            <div class="form-group">
+                <label>SEÇENEK D</label><input class="form-input" id="edit-q-opt3">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>DOĞRU CEVAP</label>
+                <select class="form-select" id="edit-q-answer">
+                    <option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>PUAN</label>
+                <input class="form-input" id="edit-q-points" type="number" min="1" max="100">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>DOĞRU MESAJ</label>
+            <input class="form-input" id="edit-q-ok">
+        </div>
+        <div class="form-group">
+            <label>YANLIŞ MESAJ</label>
+            <input class="form-input" id="edit-q-bad">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="saveEditedQuestion()">Kaydet ✓</button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="firebase.js"></script>
+<script>
+    startParticles('particles');
+
+    /* ── Şifre kontrol ──────────────────────────────────────────── */
+    function checkPw() {
+        const val = document.getElementById('pw-input').value;
+        if (checkAdminPassword(val)) {
+            document.getElementById('admin-lock').style.display   = 'none';
+            document.getElementById('admin-header').style.display = '';
+            document.getElementById('admin-panel').style.display  = '';
+            loadAll();
+        } else {
+            document.getElementById('pw-error').textContent = 'Şifre yanlış.';
+            document.getElementById('pw-input').value = '';
+        }
+    }
+
+    /* ── Sekme geçişi ───────────────────────────────────────────── */
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach((b, i) => {
+            b.classList.toggle('active', ['photos','questions','settings'][i] === name);
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(`tab-${name}`).classList.add('active');
+    }
+
+    /* ── İlk yükleme ────────────────────────────────────────────── */
+    async function loadAll() {
+        loadPhotosAdmin();
+        loadQuestionsAdmin();
+        loadSettingsAdmin();
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       FOTOĞRAFLAR
+    ══════════════════════════════════════════════════════════════ */
+
+    const SECTION_NAMES = {
+        ilk:      '📖 İlk Günlerimiz',
+        macera:   '🌍 Maceralarımız',
+        gundelik: '☀️ Gündelik Sihir'
+    };
+
+    // URL önizleme
+    document.getElementById('photo-url').addEventListener('input', function() {
+        const wrap = document.getElementById('photo-preview-wrap');
+        const img  = document.getElementById('photo-preview-img');
+        if (this.value) {
+            wrap.style.display = '';
+            img.src = this.value;
+            img.onerror = () => { wrap.style.display = 'none'; };
+        } else {
+            wrap.style.display = 'none';
+        }
+    });
+
+    async function addPhotoHandler() {
+        const url     = document.getElementById('photo-url').value.trim();
+        const section = document.getElementById('photo-section').value;
+        const caption = document.getElementById('photo-caption').value.trim();
+        if (!url) { showToast('URL boş olamaz.'); return; }
+
+        const btn = document.getElementById('add-photo-btn');
+        btn.disabled = true; btn.textContent = 'Ekleniyor...';
+        try {
+            await addPhoto(url, section, caption);
+            document.getElementById('photo-url').value      = '';
+            document.getElementById('photo-caption').value  = '';
+            document.getElementById('photo-preview-wrap').style.display = 'none';
+            showToast('Fotoğraf eklendi! ✓');
+            loadPhotosAdmin();
+        } catch (e) { showToast('Hata: ' + e.message); }
+        btn.disabled = false; btn.textContent = '+ Fotoğraf Ekle';
+    }
+
+    async function loadPhotosAdmin() {
+        document.getElementById('photos-loading').style.display = '';
+        document.getElementById('photos-list').innerHTML = '';
+        const photos = await loadPhotos();
+        document.getElementById('photos-loading').style.display = 'none';
+
+        const grouped = { ilk:[], macera:[], gundelik:[] };
+        photos.forEach(p => { if (grouped[p.section]) grouped[p.section].push(p); });
+
+        let html = '';
+        ['ilk','macera','gundelik'].forEach(sec => {
+            const list = grouped[sec];
+            html += `<div style="margin-bottom:18px">
+                <div class="photo-section-label">${SECTION_NAMES[sec]} — ${list.length} fotoğraf</div>
+                <div class="photo-grid-admin">`;
+            list.forEach(p => {
+                html += `
+                <div class="photo-admin-item">
+                    <img src="${p.url}" alt="${p.caption||''}" loading="lazy"
+                         onerror="this.src='';this.style.background='#ede4f5'">
+                    <button class="del-photo-btn" onclick="delPhoto('${p.id}')">✕</button>
+                </div>`;
+            });
+            if (!list.length) html += `<div style="grid-column:1/-1;text-align:center;padding:12px 0;color:var(--muted);font-size:.84rem;font-style:italic">Henüz fotoğraf yok</div>`;
+            html += `</div></div>`;
+        });
+
+        document.getElementById('photos-list').innerHTML = html;
+    }
+
+    async function delPhoto(id) {
+        if (!confirm('Bu fotoğrafı silmek istediğine emin misin?')) return;
+        await deletePhoto(id);
+        showToast('Silindi.');
+        loadPhotosAdmin();
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       SORULAR
+    ══════════════════════════════════════════════════════════════ */
+
+    async function addQuestionHandler() {
+        const q    = document.getElementById('q-text').value.trim();
+        const opts = [0,1,2,3].map(i => document.getElementById(`q-opt${i}`).value.trim()).filter(Boolean);
+        if (!q || opts.length < 2) { showToast('En az soru ve 2 şık gerekli.'); return; }
+
+        await addQuestion({
+            question: q,
+            options:  [0,1,2,3].map(i => document.getElementById(`q-opt${i}`).value.trim()),
+            answer:   +document.getElementById('q-answer').value,
+            points:   +document.getElementById('q-points').value || 10,
+            okMsg:    document.getElementById('q-ok').value.trim()  || '✅ Doğru!',
+            badMsg:   document.getElementById('q-bad').value.trim() || '❌ Yanlış.'
+        });
+
+        ['q-text','q-opt0','q-opt1','q-opt2','q-opt3','q-ok','q-bad'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('q-points').value = '10';
+        showToast('Soru eklendi! ✓');
+        loadQuestionsAdmin();
+    }
+
+    async function loadQuestionsAdmin() {
+        document.getElementById('questions-loading').style.display = '';
+        document.getElementById('questions-list').innerHTML = '';
+        const questions = await loadQuestions();
+        document.getElementById('questions-loading').style.display = 'none';
+
+        if (!questions.length) {
+            document.getElementById('questions-list').innerHTML =
+                '<p style="text-align:center;color:var(--muted);font-style:italic;padding:20px">Henüz soru yok</p>';
+            return;
+        }
+
+        let html = '';
+        questions.forEach((q, i) => {
+            html += `
+            <div class="q-admin-row">
+                <div class="q-admin-text">
+                    <strong>${i+1}. ${q.question}</strong>
+                    <div style="margin-top:4px;font-size:.78rem;color:var(--muted)">
+                        ${(q.options||[]).map((o,j) => `${['A','B','C','D'][j]}) ${o}`).join(' · ')}
+                    </div>
+                    <div style="font-size:.76rem;color:var(--lilac);margin-top:3px">Doğru: ${['A','B','C','D'][q.answer||0]} · ${q.points||10} puan</div>
+                </div>
+                <div class="q-admin-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="openEditModal('${q.id}')">Düzenle</button>
+                    <button class="btn btn-danger btn-sm" onclick="delQuestion('${q.id}')">Sil</button>
+                </div>
+            </div>`;
+        });
+
+        document.getElementById('questions-list').innerHTML = html;
+    }
+
+    async function delQuestion(id) {
+        if (!confirm('Bu soruyu silmek istediğine emin misin?')) return;
+        await deleteQuestion(id);
+        showToast('Soru silindi.');
+        loadQuestionsAdmin();
+    }
+
+    /* ── Edit modal ─────────────────────────────────────────────── */
+    let allQuestions = [];
+
+    async function openEditModal(id) {
+        allQuestions = await loadQuestions();
+        const q = allQuestions.find(q => q.id === id);
+        if (!q) return;
+
+        document.getElementById('edit-q-id').value    = id;
+        document.getElementById('edit-q-text').value  = q.question || '';
+        document.getElementById('edit-q-answer').value = String(q.answer ?? 0);
+        document.getElementById('edit-q-points').value = String(q.points ?? 10);
+        document.getElementById('edit-q-ok').value    = q.okMsg || '';
+        document.getElementById('edit-q-bad').value   = q.badMsg || '';
+        [0,1,2,3].forEach(i => {
+            document.getElementById(`edit-q-opt${i}`).value = (q.options || [])[i] || '';
+        });
+
+        document.getElementById('edit-modal').classList.add('open');
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').classList.remove('open');
+    }
+
+    async function saveEditedQuestion() {
+        const id   = document.getElementById('edit-q-id').value;
+        const data = {
+            question: document.getElementById('edit-q-text').value.trim(),
+            options:  [0,1,2,3].map(i => document.getElementById(`edit-q-opt${i}`).value.trim()),
+            answer:   +document.getElementById('edit-q-answer').value,
+            points:   +document.getElementById('edit-q-points').value || 10,
+            okMsg:    document.getElementById('edit-q-ok').value.trim(),
+            badMsg:   document.getElementById('edit-q-bad').value.trim()
+        };
+        await updateQuestion(id, data);
+        closeEditModal();
+        showToast('Soru güncellendi! ✓');
+        loadQuestionsAdmin();
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       AYARLAR
+    ══════════════════════════════════════════════════════════════ */
+
+    async function loadSettingsAdmin() {
+        const s = await loadSettings();
+        document.getElementById('s-p1-img').value  = s.xox_player1_img  || s.amiral_player1_img || s.c4_player1_img  || '';
+        document.getElementById('s-p2-img').value  = s.xox_player2_img  || s.amiral_player2_img || s.c4_player2_img  || '';
+        document.getElementById('s-p1-name').value = s.xox_player1_name || 'Ahmet';
+        document.getElementById('s-p2-name').value = s.xox_player2_name || 'Zeynep';
+
+        if (s.xox_player1_img) previewPlayerImg('p1-preview-wrap', s.xox_player1_img, 'A');
+        if (s.xox_player2_img) previewPlayerImg('p2-preview-wrap', s.xox_player2_img, 'Z');
+    }
+
+    function previewPlayerImg(wrapperId, url, fallbackLetter) {
+        const el = document.getElementById(wrapperId);
+        if (!el) return;
+        if (url) {
+            el.innerHTML = `<img src="${url}" alt="" onerror="this.parentElement.innerHTML='${fallbackLetter}'">`;
+        } else {
+            el.textContent = fallbackLetter;
+        }
+    }
+
+    async function saveSettings() {
+        const p1img  = document.getElementById('s-p1-img').value.trim();
+        const p2img  = document.getElementById('s-p2-img').value.trim();
+        const p1name = document.getElementById('s-p1-name').value.trim() || 'Ahmet';
+        const p2name = document.getElementById('s-p2-name').value.trim() || 'Zeynep';
+
+        const data = {
+            xox_player1_img:    p1img,  xox_player2_img:    p2img,
+            amiral_player1_img: p1img,  amiral_player2_img: p2img,
+            c4_player1_img:     p1img,  c4_player2_img:     p2img,
+            xox_player1_name:    p1name, xox_player2_name:    p2name,
+            amiral_player1_name: p1name, amiral_player2_name: p2name,
+            c4_player1_name:     p1name, c4_player2_name:     p2name
+        };
+
+        await updateSettings(data);
+        showToast('Ayarlar kaydedildi! ✓');
+    }
+
+    /* ── Toast ──────────────────────────────────────────────────── */
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+</script>
+</body>
+</html>

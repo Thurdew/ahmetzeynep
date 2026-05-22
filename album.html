@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotoğraf Albümü 📸</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-y: auto; }
+
+        .album-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 32px 0;
+            color: var(--muted);
+            font-style: italic;
+            font-family: 'Playfair Display', serif;
+            font-size: .95rem;
+        }
+
+        .loading-wrap {
+            text-align: center;
+            padding: 80px 20px;
+            font-family: 'Playfair Display', serif;
+            color: var(--muted);
+            font-size: .95rem;
+        }
+
+        .loading-wrap .spinner { margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<header class="page-header">
+    <a href="index.html" class="back-btn">← Ana Sayfa</a>
+    <h1>Fotoğraf Albümü 📸</h1>
+</header>
+
+<div class="album-wrap" id="album-wrap">
+    <div class="loading-wrap">
+        <div class="spinner"></div>
+        Anılar yükleniyor...
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="event.stopPropagation(); closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- Firebase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="firebase.js"></script>
+<script>
+    startParticles('particles');
+
+    const SECTIONS = [
+        { key: 'ilk',      label: 'Bölüm 1', title: '📖 İlk Günlerimiz', desc: 'Her şeyin başladığı o güzel anlara...' },
+        { key: 'macera',   label: 'Bölüm 2', title: '🌍 Maceralarımız',   desc: 'Birlikte keşfettiğimiz dünyalar...' },
+        { key: 'gundelik', label: 'Bölüm 3', title: '☀️ Gündelik Sihir',  desc: 'Sıradan günleri olağanüstü yapan anlar...' }
+    ];
+
+    async function renderAlbum() {
+        const photos = await loadPhotos();
+        const wrap   = document.getElementById('album-wrap');
+        let   html   = '';
+
+        SECTIONS.forEach(sec => {
+            const list = photos.filter(p => p.section === sec.key);
+
+            html += `
+            <div class="section-head" data-anim>
+                <div class="section-label">${sec.label}</div>
+                <h2 class="section-title">${sec.title}</h2>
+                <div class="section-bar"></div>
+                <p class="section-desc">${sec.desc}</p>
+            </div>
+            <div class="photo-grid">`;
+
+            if (!list.length) {
+                html += `<div class="album-empty">Henüz fotoğraf eklenmemiş 🌸</div>`;
+            } else {
+                list.forEach(photo => {
+                    const safe = (photo.url || '').replace(/'/g, "\\'");
+                    const cap  = (photo.caption || '').replace(/</g, '&lt;');
+                    html += `
+                    <div class="photo-card" data-anim onclick="openLightbox('${safe}','${cap}')">
+                        <img src="${photo.url}" alt="${cap}" loading="lazy"
+                             onerror="this.parentElement.innerHTML='<div class=photo-placeholder>📷<br><small>${cap || 'Fotoğraf'}</small></div>'">
+                    </div>`;
+                });
+            }
+
+            html += `</div>`;
+        });
+
+        wrap.innerHTML = html;
+        initObserver();
+    }
+
+    function initObserver() {
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                if (el.classList.contains('photo-card')) {
+                    const grid  = el.closest('.photo-grid');
+                    const cards = grid ? [...grid.querySelectorAll('.photo-card')] : [];
+                    setTimeout(() => el.classList.add('show'), cards.indexOf(el) * 70);
+                } else {
+                    el.classList.add('show');
+                }
+                obs.unobserve(el);
+            });
+        }, { threshold: 0.06, rootMargin: '0px 0px -20px 0px' });
+
+        document.querySelectorAll('[data-anim]').forEach(el => obs.observe(el));
+    }
+
+    function openLightbox(url, caption) {
+        const img = document.getElementById('lightbox-img');
+        img.src = url;
+        img.alt = caption || '';
+        document.getElementById('lightbox').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('open');
+        document.getElementById('lightbox-img').src = '';
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    renderAlbum();
+</script>
+</body>
+</html>
