@@ -275,7 +275,7 @@
     startParticles('particles');
 
     /* ── Sabitler ──────────────────────────────────────────────── */
-    const GRID = 8; // 8×8
+    const GRID = 8;
     const GAME_TYPE = 'amiral';
     const SHIP_DEFS = [
         { id:'carrier',    name:'Uçak Gemisi', size:4 },
@@ -284,7 +284,7 @@
         { id:'destroyer1', name:'Destroyer',   size:2 },
         { id:'destroyer2', name:'Destroyer',   size:2 }
     ];
-    const TOTAL_SHIP_CELLS = SHIP_DEFS.reduce((s, sh) => s + sh.size, 0); // 14
+    const TOTAL_SHIP_CELLS = SHIP_DEFS.reduce((s, sh) => s + sh.size, 0);
 
     const COL_LABELS = ['A','B','C','D','E','F','G','H'];
 
@@ -313,7 +313,7 @@
     async function handleCreate() {
         clearError();
         const code = await createRoom(GAME_TYPE, {
-            status: 'waiting', p1Ships:null, p2Ships:null, p1Ready:false, p2Ready:false,
+            status:'waiting', p1Ships:null, p2Ships:null, p1Ready:false, p2Ready:false,
             p1Shots:{}, p2Shots:{}, p1Sunk:0, p2Sunk:0
         });
         roomCode = code; myNum = 1;
@@ -347,7 +347,7 @@
         unsubscribe = listenRoom(GAME_TYPE, code, onUpdate);
     }
 
-    /* ── RTDB güncelleme handler ────────────────────────────────── */
+    /* ── Güncelleme handler ─────────────────────────────────────── */
     function onUpdate(data) {
         if (!data) { showError('Oda bulunamadı.'); showScreen('room'); return; }
 
@@ -355,13 +355,16 @@
             if (data.player1 === pid)      myNum = 1;
             else if (data.player2 === pid) myNum = 2;
             else if (!data.player2) {
-                joinRoom(GAME_TYPE, roomCode).then(()=>myNum=2).catch(e=>showError(e.message));
+                joinRoom(GAME_TYPE, roomCode).then(() => myNum = 2).catch(e => showError(e.message));
                 return;
             } else { showError('Bu oda dolu.'); return; }
         }
 
-        if (data.status === 'waiting')  { showScreen('wait'); return; }
-        if (data.status === 'setup')    { handleSetupPhase(data); return; }
+        if (data.status === 'waiting') { showScreen('wait'); return; }
+
+        // Her iki oyuncu katıldı ama gemiler henüz yerleştirilmedi → setup ekranı
+        if (!data.p1Ready || !data.p2Ready) { handleSetupPhase(data); return; }
+
         if (data.status === 'playing' || data.status === 'finished') { handleBattlePhase(data); }
     }
 
@@ -417,7 +420,7 @@
         selectedShipId = id;
         document.querySelectorAll('.ship-item').forEach(el => el.classList.remove('selected'));
         document.getElementById(`ship-${id}`)?.classList.add('selected');
-        document.getElementById('setup-status').textContent = 'Grid'e tıkla, gemiyi yerleştir';
+        document.getElementById('setup-status').textContent = "Grid'e tıkla, gemiyi yerleştir";
     }
 
     function rotateShip() {
@@ -687,66 +690,11 @@
     function clearError()   { document.getElementById('room-error').textContent = ''; }
     function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
 
-    /* Status 'waiting' → 'setup' geçişi: her iki oyuncu katılınca host tetikler */
-    async function checkAndStartSetup() {
-        const snap = await rtdb.ref(`games/${GAME_TYPE}/${roomCode}`).once('value');
-        const data = snap.val();
-        if (data && data.player1 && data.player2 && data.status === 'waiting' && myNum === 1) {
-            await updateRoom(GAME_TYPE, roomCode, { status: 'setup' });
-        }
-    }
-
-    // Player2 katılınca setup başlatır
-    const _origOnUpdate = onUpdate;
-    // Override: waiting → setup otomatik geçiş
-    function onUpdateWrapper(data) {
-        if (!data) return;
-        if (data.status === 'waiting' && data.player1 && data.player2) {
-            checkAndStartSetup();
-        }
-        _origOnUpdate(data);
-    }
-
-    // Listener'ı override et
-    function startListeningWrapped(code) {
-        if (unsubscribe) unsubscribe();
-        unsubscribe = listenRoom(GAME_TYPE, code, onUpdateWrapper);
-    }
-
-    // handleCreate ve handleJoin'i güncelle
-    async function handleCreate() {
-        clearError();
-        const code = await createRoom(GAME_TYPE, {
-            status:'waiting', p1Ships:null, p2Ships:null, p1Ready:false, p2Ready:false,
-            p1Shots:{}, p2Shots:{}, p1Sunk:0, p2Sunk:0
-        });
-        roomCode=code; myNum=1;
-        history.replaceState({}, '', `amiral.html?room=${code}`);
-        showScreen('wait');
-        document.getElementById('room-code-display').textContent = code;
-        startListeningWrapped(code);
-    }
-
-    async function handleJoin() {
-        clearError();
-        const code = document.getElementById('join-input').value.trim().toUpperCase();
-        if (code.length !== 6) { showError('Oda kodu 6 karakter olmalı.'); return; }
-        try {
-            await joinRoom(GAME_TYPE, code);
-            roomCode=code; myNum=2;
-            history.replaceState({}, '', `amiral.html?room=${code}`);
-            startListeningWrapped(code);
-        } catch (e) { showError(e.message); }
-    }
-
-    function joinByUrl(code) {
-        showScreen('wait');
-        document.getElementById('room-code-display').textContent = code;
-        roomCode = code;
-        startListeningWrapped(code);
-    }
-
-    init();
+    (async () => {
+        applySiteBackground();
+        await requireSitePassword();
+        init();
+    })();
 </script>
 </body>
 </html>

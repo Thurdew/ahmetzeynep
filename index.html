@@ -178,6 +178,16 @@
             document.getElementById('main-menu').classList.add('active');
         }, { once: true });
     }
+
+    (async () => {
+        applySiteBackground();
+        const passwordWasShown = await requireSitePassword();
+        // Şifre ekranı gösterildiyse açılış ekranını atla, direkt menüye geç
+        if (passwordWasShown) {
+            document.getElementById('opening').classList.add('gone');
+            document.getElementById('main-menu').classList.add('active');
+        }
+    })();
 </script>
 
 </body>

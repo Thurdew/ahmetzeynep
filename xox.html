@@ -478,7 +478,11 @@
         setTimeout(() => t.classList.remove('show'), 3000);
     }
 
-    init();
+    (async () => {
+        applySiteBackground();
+        await requireSitePassword();
+        init();
+    })();
 </script>
 </body>
 </html>

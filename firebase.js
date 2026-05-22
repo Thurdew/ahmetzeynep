@@ -11,7 +11,16 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const ADMIN_PASSWORD = "ahmetzeynep2026";
 
 /* ── Supabase client ─────────────────────────────────────────── */
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+        headers: {
+            'apikey':        SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type':  'application/json',
+            'Accept':        'application/json'
+        }
+    }
+});
 
 /* ═══════════════════════════════════════════════════════════════
    FOTOĞRAF FONKSİYONLARI
@@ -280,4 +289,114 @@ function startParticles(containerId = 'particles') {
         setTimeout(() => el.remove(), (dur + delay + 1) * 1000);
         setTimeout(spawnLoop, 650);
     })();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GİRİŞ ŞİFRESİ  — requireSitePassword()
+   Supabase'de settings.site_password doluysa şifre sorulur.
+   sessionStorage ile session boyunca tek seferlik.
+═══════════════════════════════════════════════════════════════ */
+async function requireSitePassword() {
+    if (sessionStorage.getItem('az_unlocked') === '1') return false;
+
+    const settings = await loadSettings();
+    const pwd = settings.site_password || '';
+    if (!pwd) { sessionStorage.setItem('az_unlocked', '1'); return false; }
+
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.id = 'az-site-lock';
+        overlay.style.cssText =
+            'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;' +
+            'align-items:center;justify-content:center;padding:30px;text-align:center;gap:18px;' +
+            'background:linear-gradient(135deg,#ffb6c1 0%,#c8a2c8 55%,#ffc8d4 100%)';
+        overlay.innerHTML = `
+            <h1 style="font-family:'Playfair Display',serif;font-size:clamp(2.2rem,7vw,4.2rem);
+                       color:#fff;text-shadow:0 3px 24px rgba(80,30,80,.18);
+                       opacity:0;animation:rise 1.2s ease .2s forwards">
+                Merhaba Zeynep 🌸
+            </h1>
+            <p style="color:rgba(255,255,255,.82);font-size:1rem;font-family:'Lato',sans-serif;
+                      opacity:0;animation:rise 1.2s ease .7s forwards">
+                Devam etmek için şifreyi gir
+            </p>
+            <input id="az-pw-in" type="password" placeholder="••••••••"
+                style="width:100%;max-width:300px;padding:16px 22px;border-radius:50px;border:none;
+                       font-family:'Playfair Display',serif;font-size:1.15rem;text-align:center;
+                       outline:none;background:rgba(255,255,255,.95);color:#5a4060;
+                       box-shadow:0 8px 40px rgba(0,0,0,.12);
+                       opacity:0;animation:rise 1.2s ease 1.1s forwards">
+            <p id="az-pw-err" style="color:rgba(255,200,200,.95);font-size:.88rem;
+                                     min-height:20px;font-family:'Lato',sans-serif"></p>
+            <button id="az-pw-btn"
+                style="padding:15px 52px;background:#fff;color:#c8a2c8;border:none;
+                       border-radius:50px;font-family:'Playfair Display',serif;font-size:1.05rem;
+                       cursor:pointer;box-shadow:0 8px 40px rgba(0,0,0,.14);
+                       transition:transform .3s,box-shadow .3s;
+                       opacity:0;animation:rise 1.2s ease 1.6s forwards">
+                Giriş ✨
+            </button>`;
+        document.body.prepend(overlay);
+
+        const inp = document.getElementById('az-pw-in');
+        const err = document.getElementById('az-pw-err');
+        const btn = document.getElementById('az-pw-btn');
+
+        btn.addEventListener('mouseenter', () => { btn.style.transform='translateY(-3px)'; btn.style.boxShadow='0 12px 40px rgba(0,0,0,.18)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.transform=''; btn.style.boxShadow=''; });
+
+        setTimeout(() => inp.focus(), 1800);
+
+        function tryUnlock() {
+            if (inp.value === pwd) {
+                sessionStorage.setItem('az_unlocked', '1');
+                overlay.style.transition = 'opacity .7s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.remove(); resolve(true); }, 700);
+            } else {
+                err.textContent = 'Yanlış şifre, tekrar dene 💕';
+                let t = 0;
+                const shake = setInterval(() => {
+                    inp.style.transform = t++ % 2 ? 'translateX(9px)' : 'translateX(-9px)';
+                    if (t > 5) { clearInterval(shake); inp.style.transform = ''; inp.value = ''; inp.focus(); }
+                }, 70);
+            }
+        }
+
+        btn.addEventListener('click', tryUnlock);
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+    });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ARKA FON  — applySiteBackground()
+   Supabase'deki bg_type / bg_value ayarlarını uygular.
+   localStorage cache ile anlık yüklenir.
+═══════════════════════════════════════════════════════════════ */
+async function applySiteBackground() {
+    try {
+        const cached = localStorage.getItem('az_bg');
+        if (cached) _applyBg(JSON.parse(cached));
+    } catch (_) {}
+
+    const s = await loadSettings();
+    if (s.bg_type && s.bg_value) {
+        const bgData = { type: s.bg_type, value: s.bg_value };
+        localStorage.setItem('az_bg', JSON.stringify(bgData));
+        _applyBg(bgData);
+    }
+}
+
+function _applyBg({ type, value } = {}) {
+    if (!value) return;
+    if (type === 'image') {
+        document.body.style.backgroundImage    = `url('${value}')`;
+        document.body.style.backgroundSize     = 'cover';
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundRepeat   = 'no-repeat';
+        document.body.style.backgroundAttachment = 'fixed';
+    } else {
+        document.body.style.background           = value;
+        document.body.style.backgroundAttachment = 'fixed';
+    }
 }

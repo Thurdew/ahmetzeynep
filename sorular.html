@@ -209,7 +209,11 @@
         showQuestion(0);
     }
 
-    init();
+    (async () => {
+        applySiteBackground();
+        await requireSitePassword();
+        init();
+    })();
 </script>
 </body>
 </html>
